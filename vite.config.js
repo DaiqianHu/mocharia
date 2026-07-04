@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 // ES-module game code under /src. `root` defaults to the project directory,
 // so `index.html` is the dev/build entry point.
 export default defineConfig({
+  // GitHub Pages serves this project from https://<user>.github.io/mocharia/,
+  // so built asset URLs need the repo name as a base path.
+  base: process.env.GITHUB_PAGES ? '/mocharia/' : '/',
   server: {
     open: true,
   },

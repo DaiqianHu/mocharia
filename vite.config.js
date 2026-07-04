@@ -10,4 +10,9 @@ export default defineConfig({
   server: {
     open: true,
   },
+  // baked in at build time so the title screen can show which deploy is
+  // actually live on GitHub Pages (cache-busting is otherwise invisible)
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
 });

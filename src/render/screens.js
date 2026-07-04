@@ -11,6 +11,20 @@ import { P, nextRankXp, shopStock, holidayItems, unlocksAtRank } from '../game/p
 import { BT, shopCardPos, SHOP_CARD_W, SHOP_CARD_H } from '../game/buttons.js';
 import { drawShopBackdrop, drawWood } from './scene.js';
 
+// __BUILD_TIME__ is injected by vite.config.js's `define` at build time
+// (an ISO string baked into the bundle) — formatted once and cached.
+let _buildLabel = null;
+function buildLabel(){
+  if (_buildLabel) return _buildLabel;
+  const iso = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : null;
+  if (!iso){ _buildLabel = 'dev build'; return _buildLabel; }
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  _buildLabel = 'build ' + d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())
+    + ' ' + pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+' UTC';
+  return _buildLabel;
+}
+
 export function drawScoreIcon(c,x,y,kind){
   c.save(); c.translate(x,y); c.strokeStyle='#6a4a2c'; c.fillStyle='#6a4a2c';
   c.lineWidth=2.4; c.lineCap='round'; c.lineJoin='round';
@@ -113,6 +127,10 @@ export function drawTitle(c){
   if (G.hasSave) BT.contGame.draw(c);
   c.fillStyle='rgba(232,205,176,0.5)'; c.font='700 12px Verdana, sans-serif';
   c.fillText('Mouse / touch · rank up · unlock the menu · survive the holidays', VW/2, 560);
+  // build stamp — which deploy is actually live on GitHub Pages
+  c.textAlign='left'; c.font='700 10px Verdana, sans-serif';
+  c.fillStyle='rgba(232,205,176,0.35)';
+  c.fillText(buildLabel(), 10, VH-14);
 }
 
 export function drawDayIntro(c){

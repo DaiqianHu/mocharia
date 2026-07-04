@@ -19,8 +19,8 @@ export class Customer {
     this.patience = 1;
     this.drain = calm / clamp(95 - day*4, 55, 95);   // seconds of patience
     this.state = 'enter';   // enter -> queue -> waiting -> served (walks out)
-    this.x = -70; this.y = 380;
-    this.tx = 0;  this.ty = 380;
+    this.x = VW+70; this.y = 380;
+    this.tx = 0;    this.ty = 380;
     this.bobPhase = rand(0,TAU);
     this.mood = 'happy';    // happy / meh / angry / furious
     this.skin  = choice(['#f3c9a0','#e6b088','#c98f60','#8a5a3a','#f7d9b8','#6f4529']);
@@ -70,38 +70,71 @@ export class Customer {
     const rx = this.reaction>0 ? 1+Math.sin(this.reaction*14)*0.06 : 1;
     c.save();
     c.translate(x,y); c.scale(rx,rx);
-    // shadow
-    c.fillStyle='rgba(30,14,8,0.28)';
-    c.beginPath(); c.ellipse(0, 66-bob, 26, 7, 0, 0, TAU); c.fill();
-    // legs + shoes (alternate lift while walking or stomping)
+    // shadow — two soft layers to fake a blurred contact shadow
+    c.fillStyle='rgba(30,14,8,0.16)';
+    c.beginPath(); c.ellipse(0, 66-bob, 30, 8.5, 0, 0, TAU); c.fill();
+    c.fillStyle='rgba(30,14,8,0.24)';
+    c.beginPath(); c.ellipse(0, 66-bob, 22, 6, 0, 0, TAU); c.fill();
+    // legs + shoes (alternate lift while walking or stomping) — lit left, shadowed right
     const lift = this.walking ? walkA*4 : (angry ? Math.sin(this.stompT*Math.PI)*5 : 0);
-    c.fillStyle=this.pants;
-    rr(c,-13, 26, 11, 36 - Math.max(0,lift), 5); c.fill();
-    rr(c,  2, 26, 11, 36 + Math.min(0,lift), 5); c.fill();
-    c.fillStyle='#2a2119';
-    rr(c,-15, 58-Math.max(0,lift), 15, 8, 4); c.fill();
-    rr(c,  0, 58+Math.min(0,lift), 15, 8, 4); c.fill();
-    // torso
+    const legL = c.createLinearGradient(-13,0,-2,0);
+    legL.addColorStop(0, shade(this.pants,16)); legL.addColorStop(1, shade(this.pants,-14));
+    c.fillStyle=legL; rr(c,-13, 26, 11, 36 - Math.max(0,lift), 5); c.fill();
+    const legR = c.createLinearGradient(2,0,13,0);
+    legR.addColorStop(0, shade(this.pants,2)); legR.addColorStop(1, shade(this.pants,-30));
+    c.fillStyle=legR; rr(c,  2, 26, 11, 36 + Math.min(0,lift), 5); c.fill();
+    const shoeL = c.createLinearGradient(0,58,0,66);
+    shoeL.addColorStop(0,'#453a30'); shoeL.addColorStop(1,'#181410');
+    c.fillStyle=shoeL; rr(c,-15, 58-Math.max(0,lift), 15, 8, 4); c.fill();
+    const shoeR = c.createLinearGradient(0,58,0,66);
+    shoeR.addColorStop(0,'#332a22'); shoeR.addColorStop(1,'#100d0a');
+    c.fillStyle=shoeR; rr(c,  0, 58+Math.min(0,lift), 15, 8, 4); c.fill();
+    // torso — vertical light-from-above gradient, plus a horizontal rim-light/AO
+    // pass to read as a rounded volume rather than a flat rectangle
     const bg = c.createLinearGradient(0,-18,0,30);
     bg.addColorStop(0, shade(this.shirt,18)); bg.addColorStop(1, shade(this.shirt,-20));
     c.fillStyle = bg;
     rr(c,-17,-18,34,48,10); c.fill();
+    c.save();
+    rr(c,-17,-18,34,48,10); c.clip();
+    const torsoRim=c.createLinearGradient(-17,0,-2,0);
+    torsoRim.addColorStop(0,'rgba(255,255,255,0.30)'); torsoRim.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=torsoRim; c.fillRect(-17,-18,20,48);
+    const torsoAo=c.createLinearGradient(2,0,17,0);
+    torsoAo.addColorStop(0,'rgba(20,10,4,0)'); torsoAo.addColorStop(1,'rgba(20,10,4,0.26)');
+    c.fillStyle=torsoAo; c.fillRect(2,-18,15,48);
+    c.restore();
     // arms — swing at sides; angry: fists on hips
     c.fillStyle = shade(this.shirt,-8);
     if (angry){
       rr(c,-24,-12,8,24,4); c.fill(); rr(c,16,-12,8,24,4); c.fill();
-      c.fillStyle=this.skin;
-      c.beginPath(); c.arc(-20,12,5,0,TAU); c.arc(20,12,5,0,TAU); c.fill();
+      const hg=c.createRadialGradient(-21,10,1,-20,12,6);
+      hg.addColorStop(0,shade(this.skin,20)); hg.addColorStop(1,shade(this.skin,-14));
+      c.fillStyle=hg; c.beginPath(); c.arc(-20,12,5,0,TAU); c.fill();
+      const hg2=c.createRadialGradient(19,10,1,20,12,6);
+      hg2.addColorStop(0,shade(this.skin,10)); hg2.addColorStop(1,shade(this.skin,-22));
+      c.fillStyle=hg2; c.beginPath(); c.arc(20,12,5,0,TAU); c.fill();
     } else {
       const sw = this.walking ? walkA*5 : Math.sin(t*2.4+this.bobPhase)*1;
       rr(c,-24,-14+sw,8,32,4); c.fill(); rr(c,16,-14-sw,8,32,4); c.fill();
-      c.fillStyle=this.skin;
-      c.beginPath(); c.arc(-20,20+sw,4.4,0,TAU); c.arc(20,20-sw,4.4,0,TAU); c.fill();
+      const hg=c.createRadialGradient(-21,18+sw,1,-20,20+sw,6);
+      hg.addColorStop(0,shade(this.skin,20)); hg.addColorStop(1,shade(this.skin,-14));
+      c.fillStyle=hg; c.beginPath(); c.arc(-20,20+sw,4.4,0,TAU); c.fill();
+      const hg2=c.createRadialGradient(19,18-sw,1,20,20-sw,6);
+      hg2.addColorStop(0,shade(this.skin,10)); hg2.addColorStop(1,shade(this.skin,-22));
+      c.fillStyle=hg2; c.beginPath(); c.arc(20,20-sw,4.4,0,TAU); c.fill();
     }
     // neck + head (human proportion: head ~1/4 of figure)
     c.fillStyle=shade(this.skin,-14); rr(c,-5,-26,10,10,3); c.fill();
-    c.fillStyle = this.skin;
+    // head lit like a sphere: bright upper-left, dark lower-right, soft specular
+    const hg=c.createRadialGradient(-7,-49,2,0,-42,22);
+    hg.addColorStop(0, shade(this.skin,28));
+    hg.addColorStop(0.55, this.skin);
+    hg.addColorStop(1, shade(this.skin,-24));
+    c.fillStyle = hg;
     c.beginPath(); c.ellipse(0,-42,15,17,0,0,TAU); c.fill();
+    c.fillStyle='rgba(255,255,255,0.22)';
+    c.beginPath(); c.ellipse(-7,-49,3.4,2.4,0.5,0,TAU); c.fill();
     // ears
     c.beginPath(); c.arc(-15,-42,3.4,0,TAU); c.arc(15,-42,3.4,0,TAU); c.fill();
     // hair styles

@@ -46,6 +46,15 @@ export function drawOrderStation(c){
   // customers
   const sorted=[...G.customers].sort((a,b)=>a.y-b.y);
   for (const cust of sorted) cust.draw(c,G.time);
+  // divider seam between the ordering area (counter+queue) and pick-up area (by the door)
+  c.save();
+  c.strokeStyle='rgba(30,16,8,0.4)'; c.lineWidth=3;
+  c.beginPath(); c.moveTo(630,104); c.lineTo(630,TABS_Y-2); c.stroke();
+  const dg=c.createLinearGradient(624,0,636,0);
+  dg.addColorStop(0,'rgba(255,255,255,0.02)'); dg.addColorStop(0.5,'rgba(255,255,255,0.22)'); dg.addColorStop(1,'rgba(255,255,255,0.02)');
+  c.strokeStyle=dg; c.lineWidth=1.4;
+  c.beginPath(); c.moveTo(630,104); c.lineTo(630,TABS_Y-2); c.stroke();
+  c.restore();
   // waiting sign
   c.fillStyle='rgba(42,22,12,0.8)'; rr(c,700,206,190,32,8); c.fill();
   c.fillStyle='#ffe9b8'; c.font='800 14px Verdana, sans-serif';

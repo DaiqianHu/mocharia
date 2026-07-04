@@ -7,17 +7,39 @@ import { RAIL_H, TABS_Y } from '../game/layout.js';
 import { G, currentHoliday } from '../game/state.js';
 import { owns } from '../game/progress.js';
 
+function hashN(n){ const s = Math.sin(n*12.9898)*43758.5453; return s - Math.floor(s); }
+
+/* brown spruce-plank floor: a baseboard trim, then rows of individual
+   staggered planks with per-plank tint, beveled top edge, seam shadows
+   and the occasional knot — instead of one flat gradient rectangle. */
 export function drawWood(c, y, h){
-  const g = c.createLinearGradient(0,y,0,y+h);
-  g.addColorStop(0,'#8a5a34'); g.addColorStop(0.12,'#7a4c2a'); g.addColorStop(1,'#5f3a20');
-  c.fillStyle=g; c.fillRect(0,y,VW,h);
-  c.strokeStyle='rgba(60,32,16,0.5)'; c.lineWidth=2;
-  for(let i=0;i<6;i++){
-    c.beginPath();
-    const yy=y+14+i*(h/6);
-    c.moveTo(0,yy);
-    for(let x=0;x<=VW;x+=60) c.lineTo(x, yy + Math.sin(x*0.02+i*2)*3);
-    c.stroke();
+  c.fillStyle='#e8dfc8'; c.fillRect(0,y,VW,4);
+  c.fillStyle='rgba(60,40,20,0.28)'; c.fillRect(0,y+4,VW,2);
+  const fy=y+6, fh=h-6;
+  const g = c.createLinearGradient(0,fy,0,fy+fh);
+  g.addColorStop(0,'#9a6a3e'); g.addColorStop(0.5,'#7a4c28'); g.addColorStop(1,'#5f3a20');
+  c.fillStyle=g; c.fillRect(0,fy,VW,fh);
+
+  const plankW=130, rows=Math.max(3,Math.round(fh/46)), rowH=fh/rows;
+  for(let r=0;r<rows;r++){
+    const ry=fy+r*rowH;
+    const offset=(r%2)*(plankW*0.5);
+    let i=0;
+    for(let x=-offset; x<VW; x+=plankW, i++){
+      const px=Math.max(x,0), pw=Math.min(plankW,VW-x)-3;
+      if (pw<=2) continue;
+      const n=hashN(r*31+i*7+1);
+      c.fillStyle='rgba(0,0,0,'+(0.04+n*0.07).toFixed(2)+')';
+      c.fillRect(px,ry,pw,rowH);
+      c.fillStyle='rgba(255,232,198,'+(0.10+n*0.06).toFixed(2)+')';
+      c.fillRect(px,ry,pw,2.4);
+      c.fillStyle='rgba(30,14,6,0.35)';
+      c.fillRect(px,ry+rowH-2,pw,2); c.fillRect(px+pw,ry,3,rowH);
+      if (n>0.84){
+        c.fillStyle='rgba(40,20,8,0.30)';
+        c.beginPath(); c.ellipse(px+pw*0.5, ry+rowH*0.5, 5,3,0,0,TAU); c.fill();
+      }
+    }
   }
 }
 
@@ -25,8 +47,16 @@ export function drawShopBackdrop(c){
   const h = currentHoliday();
   const g = c.createLinearGradient(0,0,0,VH);
   if (h){ g.addColorStop(0,h.sky[0]); g.addColorStop(1,h.sky[1]); }
-  else { g.addColorStop(0,'#c98a5f'); g.addColorStop(0.55,'#b4744a'); g.addColorStop(1,'#8a542f'); }
+  else { g.addColorStop(0,'#f8f5ee'); g.addColorStop(0.72,'#efe9db'); g.addColorStop(1,'#ddceb0'); }
   c.fillStyle=g; c.fillRect(0,0,VW,VH);
+  if (!h){
+    // white-wall paneling seams + a soft window-light falloff for depth
+    c.strokeStyle='rgba(120,100,70,0.10)'; c.lineWidth=1.4;
+    for(let x=60;x<VW;x+=120){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,418); c.stroke(); }
+    const lg=c.createRadialGradient(160,30,20,160,30,420);
+    lg.addColorStop(0,'rgba(255,255,255,0.4)'); lg.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=lg; c.fillRect(0,0,VW,420);
+  }
   c.fillStyle='rgba(255,235,205,0.10)';
   for(let i=0;i<7;i++){ c.beginPath(); c.arc(80+i*140, 60+((i%2)*24), 34, 0, TAU); c.fill(); }
   // holiday garland along the rail
@@ -148,8 +178,31 @@ export function drawCup(c, cup, t, opts={}){
     return y1;
   };
   let surfY = by;
-  if (cc) surfY = pour(cc.amt*UNIT, cc.type.color, !mm);
+  let seamY = null;
+  if (cc){ surfY = pour(cc.amt*UNIT, cc.type.color, !mm); if (mm) seamY = surfY; }
   if (mm) surfY = pour(mm.amt*UNIT, mm.type.color, true);
+  // coffee and milk actually blend at the seam — a soft gradient band (plus a
+  // couple of marbled swirl blobs) replaces the old hard-edged oil/water cut
+  if (cc && mm && seamY!=null){
+    const bandH = Math.min(24, h*0.16);
+    c.save(); c.globalAlpha=0.88;
+    const bg=c.createLinearGradient(0,seamY+bandH,0,seamY-bandH);
+    bg.addColorStop(0, shade(cc.type.color,-4));
+    bg.addColorStop(1, shade(mm.type.color,6));
+    c.fillStyle=bg;
+    c.beginPath(); c.moveTo(xTL,seamY+bandH); c.lineTo(xTR,seamY+bandH);
+    for (let x=xTR;x>=xTL;x-=10) c.lineTo(x, seamY-bandH + Math.sin(x*0.05+G.time*1.6)*2);
+    c.closePath(); c.fill();
+    const mix = shade(cc.type.color, 30);
+    for (let i=0;i<3;i++){
+      const sx = xTL + topW*(0.22+i*0.28) + Math.sin(G.time*0.6+i*2)*4;
+      const sg = c.createRadialGradient(sx,seamY,1, sx,seamY,bandH*1.3);
+      sg.addColorStop(0, mix+'aa'); sg.addColorStop(1, mix+'00');
+      c.fillStyle=sg;
+      c.beginPath(); c.arc(sx,seamY,bandH*1.3,0,TAU); c.fill();
+    }
+    c.restore();
+  }
   if (cc && !mm){ c.fillStyle='rgba(190,130,70,0.65)'; c.fillRect(xTL,surfY,topW,4); }
   // ice cubes bob at the surface of a cold drink
   const iced = (cc && cc.temp==='iced') || (mm && mm.temp==='cold');
@@ -200,20 +253,27 @@ export function drawCup(c, cup, t, opts={}){
     }
     const crownY = baseY - (hasWhip?20:2);
     if (tp.drizzle && tp.drizzle.pts.length>1){
-      c.strokeStyle = tp.drizzle.item.color; c.lineWidth=3.2; c.lineCap='round';
-      c.beginPath();
       const pts=tp.drizzle.pts;
-      for (let i=0;i<pts.length;i++){
-        const px=cx+pts[i].x*w, py=crownY+pts[i].y;
-        if (i===0) c.moveTo(px,py); else c.lineTo(px,py);
-      }
-      c.stroke();
+      const tracePath=()=>{
+        c.beginPath();
+        for (let i=0;i<pts.length;i++){
+          const px=cx+pts[i].x*w, py=crownY+pts[i].y;
+          if (i===0) c.moveTo(px,py); else c.lineTo(px,py);
+        }
+      };
+      // glossy syrup: dark undercoat, saturated body, thin bright highlight riding the top
+      c.strokeStyle=shade(tp.drizzle.item.color,-30); c.lineWidth=4.4; c.lineCap='round'; c.lineJoin='round';
+      tracePath(); c.stroke();
+      c.strokeStyle=tp.drizzle.item.color; c.lineWidth=3.2; c.lineCap='round'; c.lineJoin='round';
+      tracePath(); c.stroke();
+      c.strokeStyle=shade(tp.drizzle.item.color,55); c.lineWidth=1.1; c.lineCap='round'; c.lineJoin='round';
+      tracePath(); c.stroke();
     }
     if (tp.sprinkles){
       for (const d of tp.sprinkles.dots){
         c.save(); c.translate(cx+d.x*w, crownY+d.y); c.rotate(d.rot);
-        c.fillStyle=d.color;
-        rr(c,-3.2,-1.2,6.4,2.4,1.2); c.fill();
+        c.fillStyle=shade(d.color,-22); rr(c,-3.2,-0.4,6.4,2.4,1.2); c.fill();
+        c.fillStyle=shade(d.color,28); rr(c,-3.2,-1.4,6.4,1.6,1.1); c.fill();
         c.restore();
       }
     }

@@ -14,6 +14,7 @@ export class Ticket {
     this.order = cust.order;
     // what actually went in the cup: {type:<catalog item>, temp, amt, addin}
     this.cup = { coffee:null, milk:null };
+    this.cupSize = null;   // 'S'|'M'|'L' — picked at the topping station
     // toppings record where they were applied (x in -0.5..0.5 of cup width)
     this.top = {
       whip:      { cov:new Array(COV_BINS).fill(0), blobs:[] },   // blobs:{x,size}
@@ -32,7 +33,8 @@ export class Ticket {
     return !cn || (cn.shell && cn.cream && cn.fillL>0.25 && cn.fillR>0.25);
   }
   ready(){
-    return !!this.cup.coffee &&
+    return !!this.cupSize &&
+           !!this.cup.coffee &&
            (this.order.milkAmt===0 || !!this.cup.milk) &&
            this.cannoliReady();
   }

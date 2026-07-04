@@ -363,7 +363,7 @@ export function sizeOf(shots, milkAmt){
 }
 export const SIZE_NAME  = { S:'Small', M:'Medium', L:'Large' };
 export const SIZE_CAP   = { S:2.5, M:4.5, L:6.5 };   // cup capacity in portions
-export const SIZE_SCALE = { S:0.78, M:0.9, L:1.0 };  // 3D cup scale
+export const SIZE_SCALE = { S:0.7, M:0.85, L:1.0 };  // 3D cup scale
 
 /* ---- order generation, restricted to what the player has unlocked ---- */
 export function makeOrder(day, unlocked){

@@ -8,12 +8,12 @@ import { canvas, toVirtual } from './core/canvas.js';
 import { spawnParticle, popText, confettiBurst } from './core/particles.js';
 import { STATIONS, RAIL_H } from './game/layout.js';
 import { G, frontCustomer, startDay, serveActive, startMachine, dumpMachine, pourMachine, unlockedNow } from './game/state.js';
-import { BT, activeButtons } from './game/buttons.js';
+import { BT, SIZE_IDS, activeButtons } from './game/buttons.js';
 import { P, saveProgress, resetProgress, shopStock, checkHolidayComplete } from './game/progress.js';
 import { HOLIDAYS } from './game/data.js';
 import { takeOrder } from './stations/order.js';
 import { machineRect } from './stations/brew.js';
-import { shelfHit, clearToppings } from './stations/top.js';
+import { shelfHit, clearToppings, chooseSize, sizeCardHit } from './stations/top.js';
 import { cannoliShelfHit, scrapeCannoli, chooseShell } from './stations/cannoli.js';
 import { VW } from './core/constants.js';
 
@@ -90,6 +90,8 @@ function pointerDown(x,y){
       if (b===BT.machPour){ pourMachine(m); return; }
       if (b===BT.machDump){ dumpMachine(m); return; }
       if (b===BT.topClear){ clearToppings(); return; }
+      const zi = BT.sizeBtns.indexOf(b);
+      if (zi>=0){ chooseSize(SIZE_IDS[zi]); return; }
       if (b===BT.cannoliScrape){ scrapeCannoli(); return; }
       if (b===BT.serve){ serveActive(); return; }
       const si = BT.shopBuy.indexOf(b);
@@ -98,7 +100,7 @@ function pointerDown(x,y){
     } else if (b.contains(x,y)){
       b.press(); // disabled thunk
       if (b===BT.serve && G.active && !G.active.ready())
-        popText(x, y-26, 'Drink not finished!', '#ffb08a', 15);
+        popText(x, y-26, !G.active.cupSize ? 'Pick a cup size first!' : 'Drink not finished!', '#ffb08a', 15);
       if (b===BT.machPour && G.active){
         const m = G.machines[G.selMachine];
         if (m.state!=='done') popText(x, y-26, 'Nothing brewed yet!', '#ffb08a', 14);
@@ -135,8 +137,12 @@ function pointerDown(x,y){
       }
     }
   }
-  // topping station: grab a container off the shelf
-  if (G.station==='top' && G.active){
+  // topping station: grab a container off the shelf (once a cup is picked)
+  if (G.station==='top' && G.active && G.active.cupSize){
+    if (sizeCardHit(x,y)){   // tap the size card to re-pick the cup
+      G.active.cupSize=null; G.drag=null;
+      blip(420,0.07,'triangle',0.1); return;
+    }
     const s = shelfHit(x,y);
     if (s){ G.drag=s; blip(600,0.05,'triangle',0.09); return; }
   }

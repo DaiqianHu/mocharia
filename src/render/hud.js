@@ -6,7 +6,7 @@ import { VW, TAU, clamp, fmt$, rr } from '../core/constants.js';
 import { RAIL_H, TABS_Y, PANEL_X } from '../game/layout.js';
 import { G, queueCustomers } from '../game/state.js';
 import { P, nextRankXp } from '../game/progress.js';
-import { RANKS } from '../game/data.js';
+import { RANKS, SIZE_NAME } from '../game/data.js';
 import { BT } from '../game/buttons.js';
 
 export function drawRail(c){
@@ -69,7 +69,7 @@ function drawTicketCard(c, t){
     c.beginPath(); c.arc(dx+2,y+55.5,3,0,TAU); c.arc(dx+22,y+55.5,3,0,TAU); c.fill();
   }
   // progress ticks B T C
-  const topDone = (!o.whip || t.top.whip.blobs.length>0) &&
+  const topDone = !!t.cupSize && (!o.whip || t.top.whip.blobs.length>0) &&
                   (!o.drizzle || !!t.top.drizzle) && (!o.sprinkles || !!t.top.sprinkles);
   const marks=[
     ['B', !!t.cup.coffee && (o.milkAmt===0 || !!t.cup.milk)],
@@ -112,6 +112,8 @@ export function drawPanel(c){
     c.fillStyle = state===true ? '#2fa06a' : state==='warn' ? '#e08a3a' : '#6a4a2c';
     c.fillText((state===true?'✔ ':state==='warn'?'⚠ ':'• ')+txt, x+18, ly, w-34); ly+=20;
   };
+  // cup size (picked at the topping station)
+  row(SIZE_NAME[o.size]+' cup', t.cupSize ? (t.cupSize===o.size ? true : 'warn') : false);
   // coffee row (+ its syrup/powder add-in)
   const cc=t.cup.coffee;
   const cWant = o.shots+' '+(o.coffeeTemp==='iced'?'iced':'hot')+' '+o.coffee.name+' shot'+(o.shots>1?'s':'');

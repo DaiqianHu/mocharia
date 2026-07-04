@@ -40,6 +40,7 @@ export function brewScore(t){
 export function topScore(t){
   const o=t.order, tp=t.top;
   const parts=[];
+  parts.push(t.cupSize ? (t.cupSize===o.size ? 100 : 30) : 0);
   const whipCov = covScore(tp.whip.cov);
   parts.push(o.whip ? whipCov : (whipCov>0 ? 15 : 100));
   if (o.drizzle) parts.push(tp.drizzle ? (tp.drizzle.item.id===o.drizzle.id ? covScore(tp.drizzle.cov) : 25) : 0);

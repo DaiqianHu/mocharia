@@ -31,6 +31,10 @@ BT.machPour  = new Btn(218, 452, 190, 48, 'Pour into Cup', {color:'#2fa88e'});
 BT.machDump  = new Btn(418, 452, 120, 48, 'Dump', {color:'#8a6a5a'});
 
 BT.topClear      = new Btn(548, 496, 130, 36, 'Remove All', {color:'#8a6a5a', small:true});
+// cup-size picker — the first choice at the topping station (cups drawn above in top.js)
+export const SIZE_IDS = ['S','M','L'];
+BT.sizeBtns = [['Small','#5f9fc4'],['Medium','#5f8fc4'],['Large','#5f7fc4']]
+  .map(([lb,col],i)=> new Btn(160+i*180, 428, 120, 44, lb, {color:col}));
 BT.cannoliScrape = new Btn(548, 496, 130, 36, 'Scrape Clean', {color:'#8a6a5a', small:true});
 
 // sound toggle — lives in the bottom-right corner on every screen
@@ -58,7 +62,10 @@ export function activeButtons(){
     list.push(...BT.tabs);
     if (G.station==='order') list.push(BT.take);
     else if (G.station==='brew') list.push(BT.machType, BT.machTemp, BT.machAddin, ...BT.machAmt, BT.machStart, BT.machPour, BT.machDump);
-    else if (G.station==='top') list.push(BT.topClear);
+    else if (G.station==='top'){
+      if (G.active && !G.active.cupSize) list.push(...BT.sizeBtns);
+      else list.push(BT.topClear);
+    }
     else if (G.station==='cannoli') list.push(BT.cannoliScrape);
     if (G.station!=='order') list.push(BT.serve);
   }

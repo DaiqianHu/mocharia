@@ -16,6 +16,7 @@ await page.evaluate(()=>{
     id:1, cust:{ name:'Ava', patience:1, mood:'happy', state:'waiting' },
     order,
     cup:{ coffee:{type:coffee,temp:'hot',amt:3}, milk:{type:milk,temp:'hot',amt:2} },
+    cupSize:'L',
     top:{ whip:{cov:new Array(8).fill(0), blobs:[]}, drizzle:null, sprinkles:null },
     cannoli:null,
     x:12, slot:12, flash:0,

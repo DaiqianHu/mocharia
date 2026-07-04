@@ -76,7 +76,7 @@ let emitAcc = 0;
 
 export function updateTop(dt){
   const t=G.active, drag=G.drag;
-  if (!t || !drag || G.station!=='top') return;
+  if (!t || !t.cupSize || !drag || G.station!=='top') return;
   const p=G.pointer;
   if (!p.down) return;
   // the drop zone is the raycast cup-plane (source of truth for relX).
@@ -85,7 +85,7 @@ export function updateTop(dt){
   // landing under the pointer.
   const hit = hitTestScene(p.x, p.y, 'top');
   if (!hit || hit.kind!=='cup') return;
-  const sizeS = SIZE_SCALE[t.order.size] || 1;
+  const sizeS = SIZE_SCALE[t.cupSize] || 1;
   const rx = clamp(hit.relX/sizeS, -0.48, 0.48);
   const tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
   emitAcc += dt;
@@ -119,6 +119,55 @@ export function updateTop(dt){
   }
 }
 
+/* ---- cup-size picker (the first step at this station) ---- */
+export function chooseSize(sz){
+  const t=G.active; if(!t || t.cupSize===sz) return;
+  t.cupSize = sz;
+  popText(TOP_CUP.cx, TOP_CUP.by-TOP_CUP.h-40, SIZE_NAME[sz]+' cup!', '#ffe9a8', 17);
+  blip(sz==='S'?520:sz==='M'?600:680, 0.09, 'triangle', 0.11);
+}
+
+/* the "Small cup · tap to change" card under the cup */
+export function sizeCardHit(x,y){
+  return Math.abs(x-TOP_CUP.cx)<=62 && y>=TOP_CUP.by+18 && y<=TOP_CUP.by+40;
+}
+
+/* 2D glass-cup icon for the picker, scaled like the real 3D cups */
+function drawCupIcon(c, cx, byY, s){
+  const w=68*s, h=100*s, bw=w*0.78;
+  c.save();
+  c.fillStyle='rgba(30,14,8,0.28)';
+  c.beginPath(); c.ellipse(cx, byY+4, w*0.6, 7*s, 0, 0, TAU); c.fill();
+  const g=c.createLinearGradient(cx-w/2,0,cx+w/2,0);
+  g.addColorStop(0,'rgba(223,238,245,0.55)'); g.addColorStop(0.45,'rgba(223,238,245,0.2)');
+  g.addColorStop(1,'rgba(150,185,205,0.5)');
+  c.beginPath();
+  c.moveTo(cx-bw/2, byY); c.lineTo(cx-w/2, byY-h);
+  c.lineTo(cx+w/2, byY-h); c.lineTo(cx+bw/2, byY); c.closePath();
+  c.fillStyle=g; c.fill();
+  c.strokeStyle='rgba(234,244,250,0.9)'; c.lineWidth=2.5; c.stroke();
+  c.beginPath(); c.ellipse(cx, byY-h, w/2, 7*s, 0, 0, TAU); c.stroke();
+  c.fillStyle='rgba(255,255,255,0.35)';
+  rr(c, cx-w/2+7*s, byY-h+12*s, 7*s, h-24*s, 4*s); c.fill();
+  c.restore();
+}
+
+function drawSizePicker(c, t){
+  c.fillStyle='rgba(30,15,8,0.6)'; rr(c,110,150,580,352,18); c.fill();
+  c.strokeStyle='rgba(255,233,184,0.35)'; c.lineWidth=2; rr(c,110,150,580,352,18); c.stroke();
+  c.textAlign='center'; c.textBaseline='middle';
+  c.fillStyle='#ffe9b8'; c.font='800 24px "Trebuchet MS", Verdana, sans-serif';
+  c.fillText('Pick a cup size!', 400, 190);
+  c.fillStyle='rgba(255,233,184,0.85)'; c.font='700 13px Verdana, sans-serif';
+  c.fillText('What size did '+t.cust.name+' ask for? Check the order!', 400, 220);
+  const cx=[220,400,580];
+  for (let i=0;i<3;i++){
+    const sz=['S','M','L'][i];
+    drawCupIcon(c, cx[i], 404, SIZE_SCALE[sz]);
+    BT.sizeBtns[i].draw(c);
+  }
+}
+
 export function clearToppings(){
   const t=G.active; if(!t) return;
   t.top.whip = { cov:new Array(COV_BINS).fill(0), blobs:[] };
@@ -130,6 +179,8 @@ export function clearToppings(){
 export function drawTopStation(c){
   drawStationLabel(c,'Topping Station');
   const t=G.active;
+  // no size picked yet: the picker is the whole station
+  if (t && !t.cupSize){ drawSizePicker(c, t); return; }
   // shelf of containers (2D tool palette over the 3D cup)
   const shelf = topShelf();
   drawShelfFrame(c, 'GRAB A TOPPING', shelf.filter(s=>s.seasonal).length);
@@ -145,12 +196,12 @@ export function drawTopStation(c){
       rr(c,s.x-25,s.y-27,50,54,9); c.stroke(); c.setLineDash([]);
     }
   }
-  // size card next to the cup so you know which cup you're topping
+  // size card under the cup — shows YOUR pick, tap it to change your mind
   if (t){
-    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,TOP_CUP.cx-46,TOP_CUP.by+18,92,22,8); c.fill();
+    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,TOP_CUP.cx-62,TOP_CUP.by+18,124,22,8); c.fill();
     c.fillStyle='#ffe9b8'; c.font='800 11px Verdana, sans-serif';
     c.textAlign='center'; c.textBaseline='middle';
-    c.fillText(SIZE_NAME[t.order.size]+' cup', TOP_CUP.cx, TOP_CUP.by+29);
+    c.fillText(SIZE_NAME[t.cupSize]+' cup · change', TOP_CUP.cx, TOP_CUP.by+29);
   }
   // held container follows the pointer, tilted to pour
   if (G.drag && t){
@@ -366,12 +417,15 @@ export function updateTop3D(){
   if (!cup3d) return;
   const t = G.active;
   const { cup, fluid, foam, shell, whip, spr, driz, fluidMat, foamMat, ice } = cup3d;
+  // while the size picker is up there is no cup on the counter yet
+  cup.visible = !(t && !t.cupSize);
+  if (!cup.visible) return;
   shell.visible = true;
   const cc = t ? t.cup.coffee : null;
   const mm = t ? t.cup.milk : null;
 
   // small / medium / large cup — the whole group scales from its base
-  const size = t ? t.order.size : 'M';
+  const size = t ? t.cupSize : 'M';
   cup.scale.setScalar(SIZE_SCALE[size]);
 
   // blended fluid: everything poured mixes into one color, the way a

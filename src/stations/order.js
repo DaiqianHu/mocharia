@@ -61,14 +61,13 @@ export function drawOrderStation(c){
 /* ============================================================
    3D lobby + customers. The lobby is a back wall (window + door), a
    receding floor and a solid front counter with a register; customers
-   are cloned SkinnedMesh rigs reconciled against G.customers each frame
-   and posed by poseCharacter(). Capsule colliders let the raycaster
-   hit the front customer (though the 2D circle test is still primary).
+   are 2D hand-drawn sprite billboards (see render/character.js)
+   reconciled against G.customers each frame — they sit at the same z
+   as the old rigs so the counter still occludes their lower bodies.
    ============================================================ */
-import { THREE, place, mat, shadowDecal, colliders, colliderMaterial } from '../render/three.js';
-import { cloneCharacter, poseCharacter } from '../render/character.js';
+import { THREE, place, mat } from '../render/three.js';
+import { makeCustomerRig, updateCustomerRig } from '../render/character.js';
 
-const FOOT = 66;          // virtual px from customer (x,y) origin down to feet
 let order3d = null;
 
 export function buildOrder3D(group){
@@ -117,27 +116,24 @@ export function updateOrder3D(){
     live.add(cust.id);
     let rig = order3d.rigs.get(cust.id);
     if (!rig){
-      rig = cloneCharacter(cust);
-      const sh = shadowDecal(28, 10); sh.position.y = 0.5; rig.group.add(sh);
-      // capsule collider for the raycaster (mirrors the 2D tap circle)
-      const col = new THREE.Mesh(new THREE.CapsuleGeometry(30, 70, 4, 8), colliderMaterial());
-      col.position.y = 70; col.userData.custId = cust.id; rig.group.add(col);
-      colliders.customers.push({ mesh:col, id:cust.id });
+      rig = makeCustomerRig(cust);
       order3d.group.add(rig.group);
       order3d.rigs.set(cust.id, rig);
     }
-    // place at the customer's virtual position (feet at cust.y+FOOT)
-    place(rig.group, cust.x, cust.y+FOOT, 5);
-    rig.baseY = rig.group.position.y;
-    poseCharacter(rig, cust, t);
+    // place at the customer's virtual position; the figure sprite is
+    // anchored so its feet-origin lands here. z=5 keeps it behind the
+    // front counter (which occludes the lower body).
+    place(rig.group, cust.x, cust.y, 5);
+    updateCustomerRig(rig, cust, t);
   }
-  // remove rigs whose customers have left
+  // remove sprites whose customers have left
   for (const [id, rig] of order3d.rigs){
     if (!live.has(id)){
       order3d.group.remove(rig.group);
+      rig.texture.dispose();
+      rig.mesh.geometry.dispose();
+      rig.mesh.material.dispose();
       order3d.rigs.delete(id);
-      const ci = colliders.customers.findIndex(c=>c.id===id);
-      if (ci>=0) colliders.customers.splice(ci,1);
     }
   }
 }

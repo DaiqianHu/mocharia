@@ -60,16 +60,18 @@ export class Customer {
       if (this.x <= -60 || this.x >= VW+60) this.doneT += dt;
     }
   }
-  draw(c, t){
+  /* Draw the human figure centred on the current context origin (feet
+     origin = this.x/this.y). Used to paint the customer onto its 2D
+     sprite canvas; the patience meter is drawn separately as HUD. */
+  drawFigure(c, t){
     const angry = this.mood==='angry' || this.mood==='furious';
     // stomp: sharp vertical jolts; calm: gentle idle bob
     const stomp = angry ? Math.abs(Math.sin(this.stompT*Math.PI))*6 : 0;
     const bob = angry ? -stomp : Math.sin(t*2.4 + this.bobPhase)*1.6;
     const walkA = this.walking ? Math.sin(t*11 + this.bobPhase)*1 : 0;
-    const x=this.x, y=this.y + bob;
     const rx = this.reaction>0 ? 1+Math.sin(this.reaction*14)*0.06 : 1;
     c.save();
-    c.translate(x,y); c.scale(rx,rx);
+    c.translate(0, bob); c.scale(rx,rx);
     // shadow — two soft layers to fake a blurred contact shadow
     c.fillStyle='rgba(30,14,8,0.16)';
     c.beginPath(); c.ellipse(0, 66-bob, 30, 8.5, 0, 0, TAU); c.fill();
@@ -214,14 +216,5 @@ export class Customer {
       c.stroke();
     }
     c.restore();
-    // patience meter
-    if (this.state==='queue' || this.state==='waiting'){
-      const pw=54, px=x-pw/2, py=y-84;
-      c.fillStyle='rgba(30,14,8,0.55)';
-      rr(c,px-2,py-2,pw+4,12,6); c.fill();
-      const col = this.patience>0.6 ? '#3fd08c' : this.patience>0.3 ? '#ffb400' : '#ff5a4f';
-      c.fillStyle=col;
-      rr(c,px,py,Math.max(3,pw*this.patience),8,4); c.fill();
-    }
   }
 }

@@ -105,6 +105,29 @@ export const DRIZZLES = [
   {id:'gingerhaze', name:'Ginger Haze Drizzle',color:'#d89a3a', holiday:'groovstock'},
   {id:'goldenage',  name:'Golden Age Drizzle', color:'#e8c24a', holiday:'filmfest'},
 ];
+/* ---- syrups & powders (add-ins) — mixed into the coffee or the milk
+   at the brew machines; the order says which add-in goes where. ---- */
+export const ADDINS = [
+  {id:'vanillasyr', name:'Vanilla Syrup',    kind:'syrup',  color:'#e8c87a', rank:1},
+  {id:'cocoapow',   name:'Cocoa Powder',     kind:'powder', color:'#6a4428', rank:2},
+  {id:'caramelsyr', name:'Caramel Syrup',    kind:'syrup',  color:'#c87828', rank:3},
+  {id:'cinnpow',    name:'Cinnamon Powder',  kind:'powder', color:'#b06a2a', rank:4},
+  {id:'maplesyr',   name:'Maple Syrup',      kind:'syrup',  color:'#a85818', rank:5},
+  {id:'lavpow',     name:'Lavender Powder',  kind:'powder', color:'#9a7ac8', rank:6},
+  {id:'raspsyr',    name:'Raspberry Syrup',  kind:'syrup',  color:'#c84868', rank:8},
+  {id:'matchapow',  name:'Matcha Powder',    kind:'powder', color:'#7aa848', rank:9},
+  {id:'peppsyr',    name:'Peppermint Syrup', kind:'syrup',  color:'#4ac888', rank:12},
+  {id:'esppow',     name:'Espresso Powder',  kind:'powder', color:'#3a2418', rank:13},
+];
+/* ---- cannoli shells — picked before piping the cream ---- */
+export const SHELLS = [
+  {id:'classic',  name:'Classic Shell',          color:'#cf8c38', rank:0},
+  {id:'chocdip',  name:'Chocolate-Dipped Shell', color:'#cf8c38', dip:'#5a3420', rank:2},
+  {id:'redvel',   name:'Red Velvet Shell',       color:'#a84048', rank:5},
+  {id:'chocshell',name:'Chocolate Shell',        color:'#6a4428', rank:8},
+  {id:'waffle',   name:'Waffle Cone Shell',      color:'#d9a24e', rank:11},
+  {id:'honeyglz', name:'Honey-Glazed Shell',     color:'#e8b040', dip:'#f2c73c', rank:14},
+];
 export const SPRINKLE_SETS = [
   {id:'rainbow',  name:'Rainbow Sprinkles', colors:['#ff5a5f','#ffb400','#2fd08c','#3aa0ff','#c86bff'], rank:0},
   {id:'cocoa',    name:'Cocoa Sprinkles',   colors:['#6b4326','#8a5a33','#4a2c17'], rank:2},
@@ -333,6 +356,15 @@ export const MILK_TIME   = amt => 12.5 + amt*2.5; // 15/17.5/20s
 /* ---- how many customers a day brings (shared by spawner + day intro) ---- */
 export const customersForDay = day => Math.min(3 + day, 10);
 
+/* ---- drink sizes, derived from total portions (shots + milk) ---- */
+export function sizeOf(shots, milkAmt){
+  const total = shots + milkAmt;
+  return total<=2 ? 'S' : total<=4 ? 'M' : 'L';
+}
+export const SIZE_NAME  = { S:'Small', M:'Medium', L:'Large' };
+export const SIZE_CAP   = { S:2.5, M:4.5, L:6.5 };   // cup capacity in portions
+export const SIZE_SCALE = { S:0.78, M:0.9, L:1.0 };  // 3D cup scale
+
 /* ---- order generation, restricted to what the player has unlocked ---- */
 export function makeOrder(day, unlocked){
   const coffee = choice(unlocked.coffees);
@@ -342,15 +374,21 @@ export function makeOrder(day, unlocked){
   const milk    = wantsMilk ? choice(unlocked.milks) : null;
   const milkAmt = wantsMilk ? randi(1,3) : 0;
   const milkTemp = wantsMilk ? (coffeeTemp==='iced' && Math.random()<0.75 ? 'cold' : Math.random()<0.7 ? 'hot':'cold') : null;
+  // syrup/powder add-ins: the order names the add-in AND where it goes
+  const coffeeAdd = (unlocked.addins.length && Math.random()<0.40) ? choice(unlocked.addins) : null;
+  const milkAdd   = (wantsMilk && unlocked.addins.length && Math.random()<0.32) ? choice(unlocked.addins) : null;
   const whip  = Math.random() < 0.5;
   const drizzle   = Math.random() < 0.45 ? choice(unlocked.drizzles) : null;
   const sprinkles = Math.random() < 0.40 ? choice(unlocked.sprinkles) : null;
   const cannoli = Math.random() < 0.55
-    ? { cream: choice(unlocked.creams), sprinkles: Math.random()<0.5 }
+    ? { shell: choice(unlocked.shells), cream: choice(unlocked.creams),
+        sprinkles: Math.random()<0.5 ? choice(unlocked.sprinkles) : null }
     : null;
-  const o = { coffee, shots, coffeeTemp, milk, milkAmt, milkTemp, whip, drizzle, sprinkles, cannoli };
-  o.name = (coffeeTemp==='iced'?'Iced ':'') + coffee.name;
+  const o = { coffee, shots, coffeeTemp, milk, milkAmt, milkTemp,
+              coffeeAdd, milkAdd, whip, drizzle, sprinkles, cannoli };
+  o.size = sizeOf(shots, milkAmt);
+  o.name = SIZE_NAME[o.size]+' '+(coffeeTemp==='iced'?'Iced ':'') + coffee.name;
   o.price = 2.20 + shots*0.90 + milkAmt*0.45 + (whip?0.35:0) + (drizzle?0.30:0)
-          + (sprinkles?0.30:0) + (cannoli?2.50:0);
+          + (sprinkles?0.30:0) + (coffeeAdd?0.40:0) + (milkAdd?0.40:0) + (cannoli?2.50:0);
   return o;
 }

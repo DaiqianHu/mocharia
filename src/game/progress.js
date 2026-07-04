@@ -2,7 +2,7 @@
    Progression — XP/rank, shop purchases, holiday completion, and
    which ingredients are unlocked. Persists to localStorage.
    ============================================================ */
-import { COFFEES, MILKS, CREAMS, DRIZZLES, SPRINKLE_SETS, RANKS, HOLIDAYS, SHOP_ITEMS } from './data.js';
+import { COFFEES, MILKS, CREAMS, DRIZZLES, SPRINKLE_SETS, ADDINS, SHELLS, RANKS, HOLIDAYS, SHOP_ITEMS } from './data.js';
 
 export const P = {
   xp: 0,
@@ -74,6 +74,8 @@ export function unlockedItems(day){
     creams:    avail(CREAMS,        'cream',     day),
     drizzles:  avail(DRIZZLES,      'drizzle',   day),
     sprinkles: avail(SPRINKLE_SETS, 'sprinkles', day),
+    addins:    avail(ADDINS,        'addin',     day),
+    shells:    avail(SHELLS,        'shell',     day),
   };
 }
 /* things newly unlocked at exactly rank r — for the rank-up card */
@@ -84,6 +86,8 @@ export function unlocksAtRank(r){
     ...CREAMS.map(x=>({...x, what:'cannoli cream'})),
     ...DRIZZLES.map(x=>({...x, what:'drizzle'})),
     ...SPRINKLE_SETS.map(x=>({...x, what:'sprinkles'})),
+    ...ADDINS.map(x=>({...x, what:x.kind})),
+    ...SHELLS.map(x=>({...x, what:'cannoli shell'})),
   ];
   return all.filter(x => x.rank === r);
 }

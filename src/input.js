@@ -14,7 +14,7 @@ import { HOLIDAYS } from './game/data.js';
 import { takeOrder } from './stations/order.js';
 import { machineRect } from './stations/brew.js';
 import { shelfHit, clearToppings } from './stations/top.js';
-import { cannoliShelfHit, scrapeCannoli } from './stations/cannoli.js';
+import { cannoliShelfHit, scrapeCannoli, chooseShell } from './stations/cannoli.js';
 import { VW } from './core/constants.js';
 
 function cycleMachineType(m){
@@ -22,6 +22,12 @@ function cycleMachineType(m){
   const list = m.kind==='coffee' ? u.coffees : u.milks;
   const i = list.findIndex(x=>x.id===m.type.id);
   m.type = list[(i+1) % list.length] || list[0];
+}
+
+function cycleMachineAddin(m){
+  const list = [null, ...unlockedNow().addins];
+  const i = list.findIndex(x=> (x&&x.id) === (m.addin&&m.addin.id));
+  m.addin = list[(i+1) % list.length];
 }
 
 function buyItem(it){
@@ -73,6 +79,7 @@ function pointerDown(x,y){
       // machine config
       const m = G.machines[G.selMachine];
       if (b===BT.machType){ cycleMachineType(m); blip(560,0.06,'triangle',0.1); return; }
+      if (b===BT.machAddin){ cycleMachineAddin(m); blip(600,0.06,'triangle',0.1); return; }
       if (b===BT.machTemp){
         m.temp = m.temp==='hot' ? (m.kind==='coffee'?'iced':'cold') : 'hot';
         blip(480,0.06,'triangle',0.1); return;
@@ -133,10 +140,13 @@ function pointerDown(x,y){
     const s = shelfHit(x,y);
     if (s){ G.drag=s; blip(600,0.05,'triangle',0.09); return; }
   }
-  // cannoli station: grab a cream bag or sprinkle cup
+  // cannoli station: tap a shell to pick it, or grab a cream bag / sprinkle cup
   if (G.station==='cannoli' && G.active && G.active.cannoli){
     const s = cannoliShelfHit(x,y);
-    if (s){ G.drag=s; blip(600,0.05,'triangle',0.09); return; }
+    if (s){
+      if (s.cat==='shell'){ chooseShell(s.item); return; }
+      G.drag=s; blip(600,0.05,'triangle',0.09); return;
+    }
   }
 }
 

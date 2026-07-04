@@ -18,8 +18,8 @@ export const MACHINES = [
   {kind:'milk',   x: 534, y:150, w:140},
 ];
 
-// cannoli shell on its plate
-export const CANNOLI = { cx:370, cy:300, len:280, r:52 };
+// cannoli shell on its plate (right of the taller ingredient shelf)
+export const CANNOLI = { cx:450, cy:300, len:280, r:52 };
 
 export const STATIONS = ['order','brew','top','cannoli'];
 export const STATION_LABEL = {order:'Order', brew:'Brew', top:'Toppings', cannoli:'Cannoli'};

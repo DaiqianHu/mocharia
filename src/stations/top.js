@@ -4,26 +4,57 @@
    you hold it: whip dollops, drizzle lines, sprinkle showers.
    Coverage is recorded per position for drawing and scoring.
    ============================================================ */
-import { TAU, rr, rand, clamp, choice, shade } from '../core/constants.js';
+import { TAU, rr, rand, clamp, choice, shade, mixHex } from '../core/constants.js';
 import { spawnParticle, popText } from '../core/particles.js';
 import { blip, hiss } from '../core/audio.js';
 import { TOP_CUP, RAIL_H } from '../game/layout.js';
+import { SIZE_CAP, SIZE_SCALE, SIZE_NAME } from '../game/data.js';
 import { COV_BINS } from '../game/ticket.js';
-import { G, unlockedNow } from '../game/state.js';
+import { G, unlockedNow, currentHoliday } from '../game/state.js';
 import { BT } from '../game/buttons.js';
 import { drawStationLabel } from '../render/scene.js';
+
+/* ---- compact shelf layout, shared with the cannoli station ----
+   Holiday-exclusive items live in a reserved "seasonal" slot row that
+   exists even when empty, so unlocks never reshuffle the base grid. */
+export const SHELF = { x0:54, seasonalY:192, y0:248 };
+export function placeShelf(base, seasonal, cols=4, dx=76, dy=62){
+  for (let i=0;i<seasonal.length;i++){
+    seasonal[i].x = 70 + i*66; seasonal[i].y = SHELF.seasonalY; seasonal[i].seasonal = true;
+  }
+  for (let i=0;i<base.length;i++){
+    base[i].x = SHELF.x0 + (i%cols)*dx;
+    base[i].y = SHELF.y0 + Math.floor(i/cols)*dy;
+  }
+  return [...seasonal, ...base];
+}
+/* the dashed seasonal box + section header, shared by both shelves */
+export function drawShelfFrame(c, title, seasonalCount){
+  c.fillStyle='#f0e2c8'; c.font='800 14px Verdana, sans-serif';
+  c.textAlign='left'; c.textBaseline='top';
+  c.fillText(title, 44, 140);
+  const hol = currentHoliday();
+  c.strokeStyle = hol ? hol.accent : 'rgba(255,244,214,0.35)';
+  c.lineWidth=2; c.setLineDash([6,5]);
+  rr(c, 40, 162, 232, 58, 10); c.stroke(); c.setLineDash([]);
+  c.fillStyle = hol ? hol.accent : 'rgba(255,244,214,0.5)';
+  c.font='800 9px Verdana, sans-serif';
+  c.fillText('✦ SEASONAL', 48, 154);
+  if (!seasonalCount){
+    c.fillStyle='rgba(255,244,214,0.4)'; c.font='700 10px Verdana, sans-serif';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('holiday treats appear here', 156, 191);
+  }
+}
 
 /* ---- the shelf of containers (rebuilt as unlocks change) ---- */
 export function topShelf(){
   const u = unlockedNow();
-  const list = [{cat:'whip', item:{id:'whip', name:'Whipped Cream', color:'#fffdf6'}}];
-  for (const d of u.drizzles)  list.push({cat:'drizzle', item:d});
-  for (const s of u.sprinkles) list.push({cat:'sprinkles', item:s});
-  for (let i=0;i<list.length;i++){
-    list[i].x = 70 + (i%3)*96;
-    list[i].y = 196 + Math.floor(i/3)*88;
-  }
-  return list;
+  const base = [{cat:'whip', item:{id:'whip', name:'Whipped Cream', color:'#fffdf6'}}];
+  const seasonal = [];
+  for (const d of u.drizzles)  (d.holiday?seasonal:base).push({cat:'drizzle', item:d});
+  for (const s of u.sprinkles) (s.holiday?seasonal:base).push({cat:'sprinkles', item:s});
+  return placeShelf(base, seasonal);
 }
 
 /* is the pointer over the drop zone above the drink? */
@@ -48,10 +79,15 @@ export function updateTop(dt){
   if (!t || !drag || G.station!=='top') return;
   const p=G.pointer;
   if (!p.down) return;
-  // the drop zone is the raycast cup-plane (source of truth for relX)
+  // the drop zone is the raycast cup-plane (source of truth for relX).
+  // relX is a fraction of the FULL-size cup width; smaller cups are a
+  // scaled-down group, so divide by the size scale to keep the pour
+  // landing under the pointer.
   const hit = hitTestScene(p.x, p.y, 'top');
   if (!hit || hit.kind!=='cup') return;
-  const rx = hit.relX, tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
+  const sizeS = SIZE_SCALE[t.order.size] || 1;
+  const rx = clamp(hit.relX/sizeS, -0.48, 0.48);
+  const tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
   emitAcc += dt;
   if (drag.cat==='whip'){
     if (emitAcc<0.05) return; emitAcc=0;
@@ -95,17 +131,26 @@ export function drawTopStation(c){
   drawStationLabel(c,'Topping Station');
   const t=G.active;
   // shelf of containers (2D tool palette over the 3D cup)
-  c.fillStyle='#f0e2c8'; c.font='800 14px Verdana, sans-serif';
-  c.textAlign='left'; c.textBaseline='top';
-  c.fillText('GRAB A TOPPING', 44, 156);
   const shelf = topShelf();
+  drawShelfFrame(c, 'GRAB A TOPPING', shelf.filter(s=>s.seasonal).length);
+  const p=G.pointer;
   for (const s of shelf){
     const held = G.drag && G.drag.cat===s.cat && G.drag.item.id===s.item.id;
-    if (!held) drawContainer(c, s, s.x, s.y, false);
-    else { // ghost slot
+    if (!held){
+      drawContainer(c, s, s.x, s.y, false, 0.72);
+      // name label only on hover — 20+ unlocked containers get cluttered fast
+      if (Math.abs(p.x-s.x)<34 && Math.abs(p.y-s.y)<30) drawShelfLabel(c, s.item.name, s.x, s.y);
+    } else { // ghost slot
       c.strokeStyle='rgba(255,244,214,0.35)'; c.setLineDash([5,4]);
-      rr(c,s.x-32,s.y-34,64,68,10); c.stroke(); c.setLineDash([]);
+      rr(c,s.x-25,s.y-27,50,54,9); c.stroke(); c.setLineDash([]);
     }
+  }
+  // size card next to the cup so you know which cup you're topping
+  if (t){
+    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,TOP_CUP.cx-46,TOP_CUP.by+18,92,22,8); c.fill();
+    c.fillStyle='#ffe9b8'; c.font='800 11px Verdana, sans-serif';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(SIZE_NAME[t.order.size]+' cup', TOP_CUP.cx, TOP_CUP.by+29);
   }
   // held container follows the pointer, tilted to pour
   if (G.drag && t){
@@ -124,13 +169,21 @@ export function drawTopStation(c){
   c.fillText('Drag a container over the drink — it pours right where you hold it!', 475, RAIL_H+28);
 }
 
-export function drawContainer(c, s, x, y, held){
-  if (!held){
-    c.fillStyle='rgba(30,14,8,0.22)';
-    c.beginPath(); c.ellipse(x, y+30, 17, 5, 0, 0, TAU); c.fill();
-  }
+export function drawShelfLabel(c, name, x, y){
+  c.fillStyle='rgba(42,22,12,0.85)'; rr(c,x-50,y+24,100,17,6); c.fill();
+  c.fillStyle='#ffe9b8'; c.font='700 9px Verdana, sans-serif';
+  c.textAlign='center'; c.textBaseline='middle';
+  c.fillText(name, x, y+33, 94);
+}
+
+export function drawContainer(c, s, x, y, held, scale=1){
   c.save();
   c.translate(x,y);
+  c.scale(scale,scale);
+  if (!held){
+    c.fillStyle='rgba(30,14,8,0.22)';
+    c.beginPath(); c.ellipse(0, 30, 17, 5, 0, 0, TAU); c.fill();
+  }
   if (held) c.rotate(-0.35);
   const outC='rgba(40,26,14,0.5)';
   const gloss=(gx,gy,gr)=>{ const g=c.createRadialGradient(gx,gy,0,gx,gy,gr);
@@ -182,18 +235,12 @@ export function drawContainer(c, s, x, y, held){
     }
   }
   c.restore();
-  if (!held){
-    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,x-46,y+26,92,17,6); c.fill();
-    c.fillStyle='#ffe9b8'; c.font='700 9px Verdana, sans-serif';
-    c.textAlign='center'; c.textBaseline='middle';
-    c.fillText(s.item.name, x, y+35);
-  }
 }
 
 /* hit-test the shelf for pointer-down (input.js) */
 export function shelfHit(x,y){
   for (const s of topShelf())
-    if (Math.abs(x-s.x)<34 && Math.abs(y-s.y)<38) return s;
+    if (Math.abs(x-s.x)<34 && Math.abs(y-s.y)<28) return s;
   return null;
 }
 
@@ -210,7 +257,6 @@ import { stationRoom3D } from '../render/scene3d.js';
 const CUPH = TOP_CUP.h, CUPTOPR = TOP_CUP.w/2, CUPBOTR = TOP_CUP.w*0.78/2;
 const FLUID_INSET = 3;   // keep fluid just inside the glass wall
 const BASE_Y = 8;        // cup inner floor (where the wall reaches full CUPBOTR)
-const COFFEE_R = CUPBOTR - FLUID_INSET;   // circular-prism radius (fits the cup base)
 let cup3d = null;
 
 // radius of the glass at height y (0..CUPH), matching cupProfile()
@@ -228,14 +274,6 @@ function fluidFrustum(y0, y1){
   g.translate(0, y0 + h/2, 0);
   return g;
 }
-// a straight circular prism (flat top & bottom) sitting on the cup floor
-function coffeePrism(y0, y1){
-  const h = Math.max(0.001, y1-y0);
-  const g = new THREE.CylinderGeometry(COFFEE_R, COFFEE_R, h, 28, 1, false);
-  g.translate(0, y0 + h/2, 0);
-  return g;
-}
-
 function cupProfile(){
   // lathe profile points (x=radius, y from 0 at base to CUPH at rim)
   const pts = [];
@@ -258,13 +296,15 @@ export function buildTop3D(group){
   shadow.position.set(0,1,0);
   cup.add(shadow);
 
-  // fluids (geometry rebuilt to follow the cup taper when the fill changes)
-  const coffeeMat = mat('#3a2317', {rough:0.5, noCache:true});
-  const milkMat   = mat('#f4ecdb', {rough:0.5, noCache:true});
-  const coffee = new THREE.Mesh(new THREE.BufferGeometry(), coffeeMat);
-  const milk   = new THREE.Mesh(new THREE.BufferGeometry(), milkMat);
-  coffee.visible = milk.visible = false;
-  cup.add(coffee, milk);
+  // one blended fluid volume (coffee + milk + add-ins mixed like a real
+  // drink, not stacked blocks) capped by a lighter foam/crema surface.
+  // Geometry rebuilt to follow the cup taper when the fill changes.
+  const fluidMat = mat('#3a2317', {rough:0.45, noCache:true});
+  const foamMat  = mat('#f4ecdb', {rough:0.7, noCache:true});
+  const fluid = new THREE.Mesh(new THREE.BufferGeometry(), fluidMat);
+  const foam  = new THREE.Mesh(new THREE.BufferGeometry(), foamMat);
+  fluid.visible = foam.visible = false;
+  cup.add(fluid, foam);
 
   // glass shell (translucent, drawn over fluids)
   const shellGeo = new THREE.LatheGeometry(cupProfile(), 36);
@@ -316,47 +356,49 @@ export function buildTop3D(group){
   group.add(zone);
   colliders.cupZone = zone;
 
-  cup3d = { cup, coffee, milk, shell, whip, spr, driz, drizMat, coffeeMat, milkMat, ice };
+  cup3d = { cup, fluid, foam, shell, whip, spr, driz, drizMat, fluidMat, foamMat, ice };
 }
 
-const UNIT = 1/6.5;
 const USABLE = CUPH - BASE_Y;   // fillable height above the cup floor
-let drizKey = '', coffeeKey = '', milkKey = '';
+let drizKey = '', fluidKey = '';
 
 export function updateTop3D(){
   if (!cup3d) return;
   const t = G.active;
-  const { coffee, milk, shell, whip, spr, driz, coffeeMat, milkMat, ice } = cup3d;
+  const { cup, fluid, foam, shell, whip, spr, driz, fluidMat, foamMat, ice } = cup3d;
   shell.visible = true;
   const cc = t ? t.cup.coffee : null;
   const mm = t ? t.cup.milk : null;
 
+  // small / medium / large cup — the whole group scales from its base
+  const size = t ? t.order.size : 'M';
+  cup.scale.setScalar(SIZE_SCALE[size]);
+
+  // blended fluid: everything poured mixes into one color, the way a
+  // real latte does — coffee + milk + any syrup/powder add-ins
+  const units = (cc?cc.amt:0) + (mm?mm.amt:0);
   let topY = BASE_Y;   // running surface height
-  if (cc){
-    coffee.visible = true; coffeeMat.color.set(cc.type.color);
-    // coffee is a circular prism whose height tracks the shots poured
-    const f = Math.min(1, cc.amt*UNIT);
-    const y1 = BASE_Y + f*USABLE;
-    const key = f.toFixed(3);
-    if (key !== coffeeKey){
-      coffeeKey = key;
-      coffee.geometry.dispose();
-      coffee.geometry = coffeePrism(BASE_Y, y1);
+  if (units>0){
+    const pairs = [];
+    if (cc){ pairs.push([cc.type.color, cc.amt]); if (cc.addin) pairs.push([cc.addin.color, units*0.4]); }
+    if (mm){ pairs.push([mm.type.color, mm.amt*1.25]); if (mm.addin) pairs.push([mm.addin.color, units*0.4]); }
+    const col = mixHex(pairs);
+    const frac = Math.min(1, units / SIZE_CAP[size]);
+    const y1 = BASE_Y + frac*USABLE;
+    const key = size + '|' + frac.toFixed(3);
+    if (key !== fluidKey){
+      fluidKey = key;
+      fluid.geometry.dispose();
+      fluid.geometry = fluidFrustum(BASE_Y, y1-2);
+      foam.geometry.dispose();
+      foam.geometry = fluidFrustum(y1-3.5, y1);
     }
+    fluid.visible = foam.visible = true;
+    fluidMat.color.set(col);
+    // milky drinks get pale foam; straight coffee gets a crema ring
+    foamMat.color.set(mm ? mixHex([[col,1],['#fff6e8',2.2]]) : mixHex([[col,1],['#e8a860',0.9]]));
     topY = y1;
-  } else { coffee.visible = false; coffeeKey = ''; }
-  if (mm){
-    milk.visible = true; milkMat.color.set(mm.type.color);
-    const f = Math.min((CUPH-topY)/USABLE, mm.amt*UNIT);
-    const y1 = topY + f*USABLE;
-    const key = topY.toFixed(2)+'|'+f.toFixed(3);
-    if (key !== milkKey){
-      milkKey = key;
-      milk.geometry.dispose();
-      milk.geometry = fluidFrustum(topY, y1);
-    }
-    topY = y1;
-  } else { milk.visible = false; milkKey = ''; }
+  } else { fluid.visible = foam.visible = false; fluidKey = ''; }
   const surfY = topY;
 
   // ice

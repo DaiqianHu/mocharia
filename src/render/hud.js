@@ -63,7 +63,8 @@ function drawTicketCard(c, t){
   dot(o.drizzle?o.drizzle.color:'#000', !!o.drizzle);
   dot(o.sprinkles ? o.sprinkles.colors[0] : '#000', !!o.sprinkles);
   if (o.cannoli){
-    c.fillStyle='#c98a3e'; rr(c,dx+2,y+51,20,9,4); c.fill();
+    c.fillStyle=o.cannoli.shell ? o.cannoli.shell.color : '#c98a3e';
+    rr(c,dx+2,y+51,20,9,4); c.fill();
     c.fillStyle=o.cannoli.cream.color;
     c.beginPath(); c.arc(dx+2,y+55.5,3,0,TAU); c.arc(dx+22,y+55.5,3,0,TAU); c.fill();
   }
@@ -111,28 +112,43 @@ export function drawPanel(c){
     c.fillStyle = state===true ? '#2fa06a' : state==='warn' ? '#e08a3a' : '#6a4a2c';
     c.fillText((state===true?'✔ ':state==='warn'?'⚠ ':'• ')+txt, x+18, ly, w-34); ly+=20;
   };
-  // coffee row
+  // coffee row (+ its syrup/powder add-in)
   const cc=t.cup.coffee;
   const cWant = o.shots+' '+(o.coffeeTemp==='iced'?'iced':'hot')+' '+o.coffee.name+' shot'+(o.shots>1?'s':'');
   row(cWant, cc ? (cc.type.id===o.coffee.id && cc.temp===o.coffeeTemp && cc.amt===o.shots ? true:'warn') : false);
-  // milk row
+  const ccAdd = cc && cc.addin;
+  if (o.coffeeAdd)
+    row(o.coffeeAdd.name+' in the coffee',
+        cc ? (ccAdd ? (ccAdd.id===o.coffeeAdd.id ? true:'warn') : false) : false);
+  else if (ccAdd) row('No add-in in the coffee', 'warn');
+  // milk row (+ its add-in)
+  const mm=t.cup.milk, mmAdd = mm && mm.addin;
   if (o.milkAmt>0){
-    const mm=t.cup.milk;
     row(o.milkAmt+' '+(o.milkTemp==='cold'?'cold':'hot')+' '+o.milk.name,
         mm ? (mm.type.id===o.milk.id && mm.temp===o.milkTemp && mm.amt===o.milkAmt ? true:'warn') : false);
+    if (o.milkAdd)
+      row(o.milkAdd.name+' in the milk',
+          mm ? (mmAdd ? (mmAdd.id===o.milkAdd.id ? true:'warn') : false) : false);
+    else if (mmAdd) row('No add-in in the milk', 'warn');
   } else row('No milk', !t.cup.milk ? true : 'warn');
   // toppings
   if (o.whip) row('Whipped cream on top', t.top.whip.blobs.length>0);
   if (o.drizzle) row(o.drizzle.name, t.top.drizzle ? (t.top.drizzle.item.id===o.drizzle.id?true:'warn') : false);
   if (o.sprinkles) row(o.sprinkles.name, t.top.sprinkles ? (t.top.sprinkles.item.id===o.sprinkles.id?true:'warn') : false);
   if (!o.whip && !o.drizzle && !o.sprinkles) row('No toppings', (t.top.whip.blobs.length||t.top.drizzle||t.top.sprinkles)?'warn':true);
-  // cannoli
+  // cannoli: shell type, cream, then the exact end-sprinkle the customer named
   if (o.cannoli){
     const cn=t.cannoli;
-    row('Cannoli: '+o.cannoli.cream.name,
+    row('Cannoli: '+o.cannoli.shell.name,
+        cn.shell ? (cn.shell.id===o.cannoli.shell.id ? true:'warn') : false);
+    row('…filled with '+o.cannoli.cream.name,
         cn.cream ? (cn.cream.id===o.cannoli.cream.id && t.cannoliReady() ? true : cn.cream.id!==o.cannoli.cream.id?'warn':false) : false);
-    row(o.cannoli.sprinkles?'…with sprinkled ends':'…plain ends',
-        o.cannoli.sprinkles ? (cn.dotsL.length+cn.dotsR.length>0) : ((cn.dotsL.length+cn.dotsR.length)?'warn':true));
+    const dots = cn.dotsL.length+cn.dotsR.length;
+    if (o.cannoli.sprinkles)
+      row('…'+o.cannoli.sprinkles.name+' on the ends',
+          dots>0 && cn.sprItem ? (cn.sprItem.id===o.cannoli.sprinkles.id ? true:'warn') : false);
+    else
+      row('…plain ends', dots ? 'warn' : true);
   }
   c.fillStyle='#3a2216'; c.font='800 14px Verdana, sans-serif';
   c.fillText('Price: '+fmt$(o.price), x+18, ly+4);

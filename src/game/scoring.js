@@ -11,20 +11,28 @@ function covScore(cov){
   return clamp(Math.round(hit*118), 0, 100);
 }
 
-/* brew: right coffee/milk types, temps, and amounts */
+/* did the poured add-in match the ordered one? 0..25 */
+function addinScore(want, got){
+  if (want) return got ? (got.id===want.id ? 25 : 6) : 0;
+  return got ? 6 : 25;
+}
+
+/* brew: right coffee/milk types, temps, amounts, and add-ins */
 export function brewScore(t){
   const o=t.order, c=t.cup;
   if (!c.coffee) return 0;
-  let cs = (c.coffee.type.id===o.coffee.id ? 40 : 10)
-         + (c.coffee.temp===o.coffeeTemp ? 20 : 0)
-         + Math.max(0, 40 - Math.abs(c.coffee.amt-o.shots)*20);
+  let cs = (c.coffee.type.id===o.coffee.id ? 30 : 8)
+         + (c.coffee.temp===o.coffeeTemp ? 15 : 0)
+         + Math.max(0, 30 - Math.abs(c.coffee.amt-o.shots)*15)
+         + addinScore(o.coffeeAdd, c.coffee.addin);
   if (o.milkAmt===0)
     return clamp(cs - (c.milk?30:0), 0, 100);
   let ms = 0;
   if (c.milk){
-    ms = (c.milk.type.id===o.milk.id ? 40 : 10)
-       + (c.milk.temp===o.milkTemp ? 20 : 0)
-       + Math.max(0, 40 - Math.abs(c.milk.amt-o.milkAmt)*20);
+    ms = (c.milk.type.id===o.milk.id ? 30 : 8)
+       + (c.milk.temp===o.milkTemp ? 15 : 0)
+       + Math.max(0, 30 - Math.abs(c.milk.amt-o.milkAmt)*15)
+       + addinScore(o.milkAdd, c.milk.addin);
   }
   return clamp(Math.round((cs+ms)/2), 0, 100);
 }
@@ -41,18 +49,22 @@ export function topScore(t){
   return clamp(Math.round(parts.reduce((a,b)=>a+b,0)/parts.length), 0, 100);
 }
 
-/* cannoli: right cream (40), both ends filled (20+20), end sprinkles (20).
+/* cannoli: right shell (20), right cream (25), both ends filled (15+15),
+   the SPECIFIC end sprinkles the customer asked for (25).
    Returns null when the order has no cannoli.                            */
 export function cannoliScore(t){
   const o=t.order;
   if (!o.cannoli) return null;
   const cn=t.cannoli;
-  if (!cn || !cn.cream) return 0;
-  let s = (cn.cream.id===o.cannoli.cream.id ? 40 : 12)
-        + 20*clamp(cn.fillL,0,1) + 20*clamp(cn.fillR,0,1);
+  if (!cn || !cn.shell || !cn.cream) return 0;
+  let s = (cn.shell.id===o.cannoli.shell.id ? 20 : 6)
+        + (cn.cream.id===o.cannoli.cream.id ? 25 : 8)
+        + 15*clamp(cn.fillL,0,1) + 15*clamp(cn.fillR,0,1);
   const dots = cn.dotsL.length + cn.dotsR.length;
-  if (o.cannoli.sprinkles) s += clamp(dots/16,0,1)*20;
-  else s += dots>0 ? 6 : 20;
+  if (o.cannoli.sprinkles){
+    if (dots>0 && cn.sprItem)
+      s += cn.sprItem.id===o.cannoli.sprinkles.id ? clamp(dots/16,0,1)*25 : 8;
+  } else s += dots>0 ? 8 : 25;
   return clamp(Math.round(s), 0, 100);
 }
 

@@ -21,10 +21,11 @@ BT.take  = new Btn(120, 470, 190, 52, 'Take Order', {color:'#e0813a'});
 BT.serve = new Btn(PANEL_X+22, 476, 220, 50, 'Serve!', {color:'#d84a6b'});
 BT.tabs = STATIONS.map((s,i)=> new Btn(14+i*172, TABS_Y, 160, 44, STATION_LABEL[s], {color:'#7a4a30'}));
 
-// brew machine config strip
-BT.machType  = new Btn(58, 414, 180, 30, '', {color:'#5f6fc4', small:true});
-BT.machTemp  = new Btn(248, 414, 100, 30, 'Hot', {color:'#c86b4a', small:true});
-BT.machAmt   = [0,1,2].map(i=> new Btn(358+i*48, 414, 42, 30, ''+(i+1), {color:'#8a6ac0', small:true}));
+// brew machine config strip (row 1: type · temp · add-in · amount 1-3)
+BT.machType  = new Btn(58, 414, 156, 30, '', {color:'#5f6fc4', small:true});
+BT.machTemp  = new Btn(222, 414, 76, 30, 'Hot', {color:'#c86b4a', small:true});
+BT.machAddin = new Btn(306, 414, 156, 30, 'No Add-in', {color:'#8a5ab0', small:true});
+BT.machAmt   = [0,1,2].map(i=> new Btn(492+i*44, 414, 38, 30, ''+(i+1), {color:'#8a6ac0', small:true}));
 BT.machStart = new Btn(58, 452, 150, 48, 'Start', {color:'#e0813a'});
 BT.machPour  = new Btn(218, 452, 190, 48, 'Pour into Cup', {color:'#2fa88e'});
 BT.machDump  = new Btn(418, 452, 120, 48, 'Dump', {color:'#8a6a5a'});
@@ -56,7 +57,7 @@ export function activeButtons(){
     if (G.result){ list.push(BT.cont); return list; }
     list.push(...BT.tabs);
     if (G.station==='order') list.push(BT.take);
-    else if (G.station==='brew') list.push(BT.machType, BT.machTemp, ...BT.machAmt, BT.machStart, BT.machPour, BT.machDump);
+    else if (G.station==='brew') list.push(BT.machType, BT.machTemp, BT.machAddin, ...BT.machAmt, BT.machStart, BT.machPour, BT.machDump);
     else if (G.station==='top') list.push(BT.topClear);
     else if (G.station==='cannoli') list.push(BT.cannoliScrape);
     if (G.station!=='order') list.push(BT.serve);
@@ -78,6 +79,8 @@ export function refreshButtonState(){
     BT.machType.enabled = idle;
     BT.machTemp.label = m.kind==='coffee' ? (m.temp==='hot'?'Hot':'Iced') : (m.temp==='hot'?'Hot':'Cold');
     BT.machTemp.enabled = idle;
+    BT.machAddin.label = m.addin ? m.addin.name : 'No Add-in';
+    BT.machAddin.enabled = idle;
     for (let i=0;i<3;i++){
       BT.machAmt[i].enabled = idle;
       BT.machAmt[i].selected = (m.amt===i+1);

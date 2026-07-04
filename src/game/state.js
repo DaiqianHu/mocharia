@@ -44,7 +44,7 @@ export function resetMachines(){
   G.machines = MACHINES.map(m=>({
     ...m,
     type: m.kind==='coffee' ? u.coffees[0] : u.milks[0],
-    temp: 'hot', amt: 1,
+    temp: 'hot', amt: 1, addin: null,
     state:'idle', t:0, total:0,
   }));
   G.selMachine = 0;
@@ -253,7 +253,7 @@ export function pourMachine(m){
   if (!t || m.state!=='done') return;
   const slot = m.kind==='coffee' ? 'coffee' : 'milk';
   if (t.cup[slot]){ popText(m.x+m.w/2, 150, 'Cup already has '+slot+'!', '#ffb08a', 14); return; }
-  t.cup[slot] = { type:m.type, temp:m.temp, amt:m.amt };
+  t.cup[slot] = { type:m.type, temp:m.temp, amt:m.amt, addin:m.addin };
   m.state='idle'; m.t=0;
   popText(m.x+m.w/2, 150, 'Poured!', '#8fe0a8', 16);
   pour(0.5);

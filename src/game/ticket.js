@@ -12,7 +12,7 @@ export class Ticket {
     this.id = ++_tid;
     this.cust = cust;
     this.order = cust.order;
-    // what actually went in the cup: {type:<catalog item>, temp, amt}
+    // what actually went in the cup: {type:<catalog item>, temp, amt, addin}
     this.cup = { coffee:null, milk:null };
     // toppings record where they were applied (x in -0.5..0.5 of cup width)
     this.top = {
@@ -21,7 +21,7 @@ export class Ticket {
       sprinkles: null,   // {item, cov:[], dots:[{x,y,rot,color}]}
     };
     this.cannoli = this.order.cannoli
-      ? { cream:null, fillL:0, fillR:0, dotsL:[], dotsR:[] }
+      ? { shell:null, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] }
       : null;
     this.x = VW + 80;           // slides in from the right
     this.slot = 0;
@@ -29,7 +29,7 @@ export class Ticket {
   }
   cannoliReady(){
     const cn = this.cannoli;
-    return !cn || (cn.cream && cn.fillL>0.25 && cn.fillR>0.25);
+    return !cn || (cn.shell && cn.cream && cn.fillL>0.25 && cn.fillR>0.25);
   }
   ready(){
     return !!this.cup.coffee &&

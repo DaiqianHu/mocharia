@@ -11,23 +11,33 @@ import { CANNOLI, RAIL_H } from '../game/layout.js';
 import { G, unlockedNow } from '../game/state.js';
 import { BT } from '../game/buttons.js';
 import { drawStationLabel } from '../render/scene.js';
-import { drawContainer } from './top.js';
+import { drawContainer, placeShelf, drawShelfFrame, drawShelfLabel } from './top.js';
 
-/* shelf: cream piping bags + one sprinkle cup per unlocked set */
+/* shelf: tap-to-pick shells, then cream piping bags + sprinkle cups.
+   Denser 5-column grid — this station has the biggest catalog. */
 export function cannoliShelf(){
   const u = unlockedNow();
-  const list = u.creams.map(cr=>({cat:'cream', item:cr}));
-  for (const s of u.sprinkles) list.push({cat:'endsprinkles', item:s});
-  for (let i=0;i<list.length;i++){
-    list[i].x = 70 + (i%3)*96;
-    list[i].y = 196 + Math.floor(i/3)*88;
-  }
-  return list;
+  const base = u.shells.map(sh=>({cat:'shell', item:sh}));
+  const seasonal = [];
+  for (const cr of u.creams)    (cr.holiday?seasonal:base).push({cat:'cream', item:cr});
+  for (const s of u.sprinkles)  (s.holiday?seasonal:base).push({cat:'endsprinkles', item:s});
+  return placeShelf(base, seasonal, 5, 60, 56);
 }
 export function cannoliShelfHit(x,y){
   for (const s of cannoliShelf())
-    if (Math.abs(x-s.x)<34 && Math.abs(y-s.y)<38) return s;
+    if (Math.abs(x-s.x)<27 && Math.abs(y-s.y)<26) return s;
   return null;
+}
+
+/* tapping a shell on the shelf picks it (no dragging) — the shell is
+   chosen BEFORE any cream goes in; switching shells restarts the build */
+export function chooseShell(item){
+  const t=G.active; if(!t || !t.cannoli) return;
+  const cn=t.cannoli;
+  if (cn.shell && cn.shell.id===item.id) return;
+  t.cannoli = { shell:item, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
+  popText(CANNOLI.cx, CANNOLI.cy-90, item.name+'!', '#ffe9a8', 16);
+  blip(560,0.07,'triangle',0.1,120);
 }
 
 /* which end of the shell is the pointer over? */
@@ -50,10 +60,14 @@ export function updateCannoli(dt){
   const end = endAt(p.x,p.y);
   if (!end) return;
   const cn=t.cannoli;
+  if (!cn.shell){
+    if (Math.random()<dt*2) popText(p.x, p.y-30, 'Pick a shell first!', '#ffb08a', 13);
+    return;
+  }
   if (drag.cat==='cream'){
     // switching cream flavor restarts the filling
     if (!cn.cream || cn.cream.id!==drag.item.id){
-      cn.cream=drag.item; cn.fillL=0; cn.fillR=0; cn.dotsL.length=0; cn.dotsR.length=0;
+      cn.cream=drag.item; cn.fillL=0; cn.fillR=0; cn.sprItem=null; cn.dotsL.length=0; cn.dotsR.length=0;
     }
     const key = end==='L'?'fillL':'fillR';
     cn[key] = clamp(cn[key] + dt*0.55, 0, 1);
@@ -69,6 +83,11 @@ export function updateCannoli(dt){
     }
     emitAcc+=dt;
     if (emitAcc<0.05) return; emitAcc=0;
+    // switching sprinkle sets shakes off the old ones — the customer
+    // asked for a specific kind
+    if (!cn.sprItem || cn.sprItem.id!==drag.item.id){
+      cn.sprItem = drag.item; cn.dotsL.length=0; cn.dotsR.length=0;
+    }
     const dots = end==='L'?cn.dotsL:cn.dotsR;
     const col = choice(drag.item.colors);
     dots.push({a:rand(0,TAU), rr:rand(0,1), rot:rand(0,TAU), color:col});
@@ -80,7 +99,8 @@ export function updateCannoli(dt){
 
 export function scrapeCannoli(){
   const t=G.active; if(!t || !t.cannoli) return;
-  t.cannoli = { cream:null, fillL:0, fillR:0, dotsL:[], dotsR:[] };
+  // keep the chosen shell, scrape off cream + sprinkles
+  t.cannoli = { shell:t.cannoli.shell, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
   popText(CANNOLI.cx, CANNOLI.cy-90, 'Scraped clean', '#ffe9a8', 16);
   blip(320,0.09,'triangle',0.1);
 }
@@ -96,17 +116,25 @@ export function drawCannoliStation(c){
     return;
   }
   const {cx,cy,len,r}=CANNOLI;
+  const cn = t ? t.cannoli : null;
   // shelf (2D tool palette over the 3D cannoli)
-  c.fillStyle='#f0e2c8'; c.font='800 14px Verdana, sans-serif';
-  c.textAlign='left'; c.textBaseline='top';
-  c.fillText('CREAMS & SPRINKLES', 44, 156);
-  for (const s of cannoliShelf()){
+  const shelf = cannoliShelf();
+  drawShelfFrame(c, 'SHELLS · CREAMS · SPRINKLES', shelf.filter(s=>s.seasonal).length);
+  const p=G.pointer;
+  for (const s of shelf){
     const held = G.drag && G.drag.cat===s.cat && G.drag.item.id===s.item.id;
-    if (!held) drawShelfItem(c, s, s.x, s.y, false);
-    else { c.strokeStyle='rgba(255,244,214,0.35)'; c.setLineDash([5,4]);
-      rr(c,s.x-32,s.y-34,64,68,10); c.stroke(); c.setLineDash([]); }
+    if (!held){
+      drawShelfItem(c, s, s.x, s.y, false, 0.62);
+      // the chosen shell gets a glowing frame
+      if (s.cat==='shell' && cn && cn.shell && cn.shell.id===s.item.id){
+        c.strokeStyle='#ffd98a'; c.lineWidth=2.4;
+        rr(c,s.x-25,s.y-24,50,48,9); c.stroke();
+      }
+      if (Math.abs(p.x-s.x)<27 && Math.abs(p.y-s.y)<26) drawShelfLabel(c, s.item.name, s.x, s.y-4);
+    } else { c.strokeStyle='rgba(255,244,214,0.35)'; c.setLineDash([5,4]);
+      rr(c,s.x-24,s.y-24,48,48,9); c.stroke(); c.setLineDash([]); }
   }
-  if (G.drag && t && t.cannoli){
+  if (G.drag && cn){
     drawShelfItem(c, G.drag, G.pointer.x, G.pointer.y-14, true);
     // glow the ends
     const glow=0.4+Math.sin(G.time*7)*0.25;
@@ -119,13 +147,31 @@ export function drawCannoliStation(c){
   c.fillStyle='rgba(42,22,12,0.75)'; rr(c,268,RAIL_H+14,414,28,8); c.fill();
   c.fillStyle='#ffe9b8'; c.font='700 11px Verdana, sans-serif';
   c.textAlign='center'; c.textBaseline='middle';
-  c.fillText('Hold a cream bag over EACH end to pipe · then sprinkle the ends', 475, RAIL_H+28);
+  c.fillText(cn && !cn.shell
+    ? 'Tap the shell the customer asked for to start the cannoli!'
+    : 'Hold a cream bag over EACH end to pipe · then sprinkle the ends', 475, RAIL_H+28);
 }
 
-function drawShelfItem(c, s, x, y, held){
-  if (s.cat!=='cream'){ drawContainer(c, s, x, y, held); return; }
+function drawShelfItem(c, s, x, y, held, scale=1){
+  if (s.cat==='endsprinkles'){ drawContainer(c, s, x, y, held, scale); return; }
+  c.save(); c.translate(x,y); c.scale(scale,scale);
+  if (s.cat==='shell'){
+    // mini cannoli-tube icon in the shell's pastry color
+    const col=s.item.color;
+    const g=c.createLinearGradient(0,-12,0,12);
+    g.addColorStop(0,shade(col,30)); g.addColorStop(1,shade(col,-30));
+    c.fillStyle=g; rr(c,-24,-12,48,24,11); c.fill();
+    c.strokeStyle='rgba(70,40,14,0.6)'; c.lineWidth=2.4; rr(c,-24,-12,48,24,11); c.stroke();
+    if (s.item.dip){
+      c.fillStyle=s.item.dip;
+      rr(c,-24,-12,13,24,11); c.fill(); rr(c,11,-12,13,24,11); c.fill();
+    }
+    c.fillStyle='#5a3a20';
+    c.beginPath(); c.ellipse(-24,0,4,9,0,0,TAU); c.ellipse(24,0,4,9,0,0,TAU); c.fill();
+    c.restore();
+    return;
+  }
   // piping bag
-  c.save(); c.translate(x,y);
   if (held) c.rotate(0.5);
   c.fillStyle=shade(s.item.color,-6);
   c.beginPath(); c.moveTo(-16,-22); c.lineTo(16,-22); c.lineTo(3,20); c.lineTo(-3,20); c.closePath(); c.fill();
@@ -137,12 +183,6 @@ function drawShelfItem(c, s, x, y, held){
     for(let i=0;i<6;i++){ c.beginPath(); c.arc(-8+(i%3)*8,-14+Math.floor(i/3)*12,1.6,0,TAU); c.fill(); }
   }
   c.restore();
-  if (!held){
-    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,x-46,y+32,92,17,6); c.fill();
-    c.fillStyle='#ffe9b8'; c.font='700 9px Verdana, sans-serif';
-    c.textAlign='center'; c.textBaseline='middle';
-    c.fillText(s.item.name, x, y+41);
-  }
 }
 
 /* draws a cannoli (also reused at small scale on the ticket panel) */
@@ -220,7 +260,7 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
    shallow board sits under it. Empty ends show a dark cap. End
    hit-testing still uses the virtual-coord endAt() (shell sits at z≈0).
    ============================================================ */
-import { THREE, place, mat, shadowDecal } from '../render/three.js';
+import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture } from '../render/three.js';
 import { stationRoom3D } from '../render/scene3d.js';
 
 let can3d = null;
@@ -237,30 +277,44 @@ export function buildCannoli3D(group){
   // serving board
   const board = new THREE.Mesh(new THREE.BoxGeometry(len*1.15, 14, 60),
     mat('#f0e8da',{rough:0.7, noCache:true}));
+  board.material.map = woodTexture(2, 0.4);
   board.position.set(0,-r-2,-4); g.add(board);
 
-  // shell tube (golden pastry), axis along X
+  // shell tube (pastry, recolored per chosen shell type), axis along X
   const shellGeo = new THREE.CylinderGeometry(r, r, len, 32, 1, true);
   shellGeo.rotateZ(Math.PI/2);
-  const shell = new THREE.Mesh(shellGeo, mat('#cf8c38',{rough:0.55, noCache:true}));
+  const shellMat = mat('#cf8c38',{rough:0.55, noCache:true});
+  shellMat.map = pastryTexture(3, 1);   // blistered fried-shell surface
+  shellMat.transparent = true;   // ghost preview until a shell is chosen
+  const shell = new THREE.Mesh(shellGeo, shellMat);
   g.add(shell);
   // inner dark tube (seen through the open ends)
   const innerGeo = new THREE.CylinderGeometry(r-6, r-6, len-2, 24, 1, true);
   innerGeo.rotateZ(Math.PI/2);
   const inner = new THREE.Mesh(innerGeo, mat('#5a3a20',{rough:0.8, noCache:true}));
   inner.material.side = THREE.BackSide; g.add(inner);
-  // flaky ridge rings around the tube
+  // flaky ridge rings around the tube (recolored with the shell)
+  const rings = [];
   for (let i=-2;i<=2;i++){
     const ring = new THREE.Mesh(new THREE.TorusGeometry(r+1, 3, 8, 28),
-      mat('#a86e28',{rough:0.6}));
+      mat('#a86e28',{rough:0.6, noCache:true}));
     ring.rotation.y = Math.PI/2;          // wrap around X axis
     ring.position.x = i*len*0.18; g.add(ring);
+    rings.push(ring);
   }
-  // rim highlights at each mouth
-  const rimMat = mat('#eac06a',{rough:0.4});
+  // rim highlights at each mouth + dip coating sleeves (chocolate-dipped
+  // and glazed shells get coated ends)
+  const rims = [], dips = [];
   for (const dir of [-1,1]){
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(r-1, 3, 8, 28), rimMat);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r-1, 3, 8, 28),
+      mat('#eac06a',{rough:0.4, noCache:true}));
     rim.rotation.y = Math.PI/2; rim.position.x = dir*len/2; g.add(rim);
+    rims.push(rim);
+    const dipGeo = new THREE.CylinderGeometry(r+2, r+2, len*0.2, 28, 1, true);
+    dipGeo.rotateZ(Math.PI/2);
+    const dip = new THREE.Mesh(dipGeo, mat('#5a3420',{rough:0.3, noCache:true}));
+    dip.position.x = dir*(len/2 - len*0.1); dip.visible = false; g.add(dip);
+    dips.push(dip);
   }
 
   // dark end caps (shown when an end has no cream)
@@ -283,7 +337,7 @@ export function buildCannoli3D(group){
     sprs[key] = spr;
   }
 
-  can3d = { g, shell, inner, caps, creams, sprs };
+  can3d = { g, shell, inner, rings, rims, dips, caps, creams, sprs };
 }
 
 export function updateCannoli3D(){
@@ -294,6 +348,24 @@ export function updateCannoli3D(){
   if (!on) return;
   const cn = t.cannoli;
   const {len,r} = CANNOLI;
+  // shell appearance: ghost preview until the player taps a shell type,
+  // then recolor the pastry (+ dip sleeves for coated shells)
+  const chosen = !!cn.shell;
+  can3d.shell.material.opacity = chosen ? 1 : 0.4;
+  can3d.shell.material.color.set(chosen ? cn.shell.color : '#d8c49a');
+  can3d.inner.visible = chosen;
+  for (const ring of can3d.rings){
+    ring.visible = chosen;
+    if (chosen) ring.material.color.set(shade(cn.shell.color,-25));
+  }
+  for (const rim of can3d.rims){
+    rim.visible = chosen;
+    if (chosen) rim.material.color.set(shade(cn.shell.color,25));
+  }
+  for (const dip of can3d.dips){
+    dip.visible = chosen && !!cn.shell.dip;
+    if (dip.visible) dip.material.color.set(cn.shell.dip);
+  }
   for (const key of ['L','R']){
     const dir = key==='L' ? -1 : 1;
     const fill = key==='L' ? cn.fillL : cn.fillR;
@@ -327,7 +399,7 @@ export function updateCannoli3D(){
       spr.instanceMatrix.needsUpdate = true;
       if (spr.instanceColor) spr.instanceColor.needsUpdate = true;
     } else {
-      cream.visible = false; cap.visible = true; spr.count = 0;
+      cream.visible = false; cap.visible = chosen; spr.count = 0;
     }
   }
 }

@@ -5,10 +5,11 @@
    then start it and wait out the brew timer. Pour the finished
    cup into the active ticket's drink.
    ============================================================ */
-import { TAU, rr, shade, clamp } from '../core/constants.js';
+import { TAU, rr, shade, clamp, mixHex } from '../core/constants.js';
 import { RAIL_H } from '../game/layout.js';
 import { G } from '../game/state.js';
 import { BT } from '../game/buttons.js';
+import { owns } from '../game/progress.js';
 import { drawStationLabel } from '../render/scene.js';
 
 /* geometry helpers shared with input hit-testing */
@@ -26,10 +27,11 @@ export function drawBrewStation(c){
   c.fillStyle='rgba(42,22,12,0.82)'; rr(c,40,392,640,116,14); c.fill();
   c.fillStyle='#ffe9b8'; c.font='800 13px Verdana, sans-serif';
   c.textAlign='left'; c.textBaseline='middle';
-  c.fillText((m.kind==='coffee'?'COFFEE MACHINE ':'MILK STEAMER ')+(G.selMachine+1), 58, 404);
-  c.font='700 11px Verdana, sans-serif'; c.fillStyle='rgba(255,233,184,0.7)';
-  c.fillText(m.kind==='coffee' ? 'shots' : 'portions', 510, 429);
-  BT.machType.draw(c); BT.machTemp.draw(c);
+  c.fillText((m.kind==='coffee'?'COFFEE MACHINE ':'MILK STEAMER ')+(G.selMachine+1)
+    + (owns(m.kind==='coffee'?'brewfast':'steamfast') ? '  ⚡TURBO' : ''), 58, 404);
+  c.font='700 10px Verdana, sans-serif'; c.fillStyle='rgba(255,233,184,0.7)';
+  c.fillText(m.kind==='coffee' ? 'shots' : 'portions', 624, 429);
+  BT.machType.draw(c); BT.machTemp.draw(c); BT.machAddin.draw(c);
   for (const b of BT.machAmt) b.draw(c);
   BT.machStart.draw(c); BT.machPour.draw(c); BT.machDump.draw(c);
   // hint
@@ -48,10 +50,15 @@ function drawMachineHUD(c, m, selected){
   c.fillStyle = selected ? '#ffe9b8' : 'rgba(255,255,255,0.92)';
   c.font='800 12px Verdana, sans-serif';
   c.fillText((m.kind==='coffee'?'☕ COFFEE ':'🥛 MILK ')+(G.machines.indexOf(m)+1), cx, m.y+20);
-  // type + temp readout
+  // type + temp (+ add-in) readout
   c.fillStyle = selected ? '#fff4d6' : 'rgba(255,244,222,0.82)';
   c.font='700 10px Verdana, sans-serif';
   c.fillText(m.type.name+'  ·  '+tempLabel(m), cx, m.y+36);
+  if (m.addin){
+    c.fillStyle = shade(m.addin.color, 70);
+    c.font='700 9px Verdana, sans-serif';
+    c.fillText('+ '+m.addin.name, cx, m.y+50);
+  }
   // status under the measuring cup
   const sy = m.y+CUP_BOT+24;
   if (running){
@@ -170,13 +177,35 @@ export function buildBrew3D(group){
       mat('#ffd98a',{rough:0.4, emissive:'#ffb020', emissiveIntensity:0.8, noCache:true}));
     selRing.rotation.x=Math.PI/2; selRing.position.set(0,2,0); selRing.visible=false; g.add(selRing);
 
+    // turbo upgrade badge: glowing racing fins on both sides of the body
+    // (shown once the matching Turbo Brewer / Turbo Steamer is owned)
+    const turbo = new THREE.Group();
+    const finMat = mat('#e0342a',{rough:0.35, emissive:'#ff5a20', emissiveIntensity:0.55, noCache:true});
+    for (const dir of [-1,1]){
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(8, bodyH*0.55, 34), finMat);
+      fin.position.set(dir*(src.w/2-3), (bodyBot+bodyTop)/2, 6);
+      fin.rotation.x = -0.25;
+      turbo.add(fin);
+    }
+    turbo.visible = false; g.add(turbo);
+
+    // brew-alarm bell perched on top of the body (shown when 'alarm' owned)
+    const bell = new THREE.Group();
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(9,14,10,0,Math.PI*2,0,Math.PI/2),
+      mat('#e8b040',{rough:0.3, metal:0.6}));
+    bell.add(dome);
+    const clapper = new THREE.Mesh(new THREE.SphereGeometry(3,8,6), mat('#7a5a20',{rough:0.5}));
+    clapper.position.set(0,-1,0); bell.add(clapper);
+    bell.position.set(-src.w/2+22, bodyTop+8, 12);
+    bell.visible = false; g.add(bell);
+
     // invisible collider box over the whole machineRect (for raycast API)
     const col = new THREE.Mesh(new THREE.BoxGeometry(src.w, 210, 80), colliderMaterial());
     place(col, cx, src.y+105, MZ);
     group.add(col);
     colliders.machines.push({ mesh:col, index:i });
 
-    machines.push({ g, body, panel, lamp, lampMat, spout, glass, fluid, fluidMat, rings, pour, ice, selRing, kind:src.kind });
+    machines.push({ g, body, panel, lamp, lampMat, spout, glass, fluid, fluidMat, rings, pour, ice, selRing, turbo, bell, kind:src.kind });
   }
   brew3d = { machines };
 }
@@ -187,10 +216,10 @@ export function updateBrew3D(){
     const m = G.machines[i], r = brew3d.machines[i];
     const running = m.state==='run', done = m.state==='done';
     const cold = isCold(m);
-    // fluid fill
+    // fluid fill (tinted by the chosen add-in so it reads as mixed in)
     const target = m.amt/3;
     const frac = done ? target : running ? target*clamp(m.t/m.total,0,1) : 0;
-    r.fluidMat.color.set(m.type.color);
+    r.fluidMat.color.set(m.addin ? mixHex([[m.type.color,1],[m.addin.color,0.5]]) : m.type.color);
     if (frac>0.001){ r.fluid.visible=true; r.fluid.userData.fill(frac); }
     else r.fluid.visible=false;
     const surfY = frac*CUP_H;
@@ -228,5 +257,8 @@ export function updateBrew3D(){
     }
     // selection ring
     r.selRing.visible = (i===G.selMachine);
+    // owned-upgrade props
+    r.turbo.visible = owns(m.kind==='coffee' ? 'brewfast' : 'steamfast');
+    r.bell.visible = owns('alarm');
   }
 }

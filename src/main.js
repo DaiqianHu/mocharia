@@ -24,10 +24,11 @@ import { update, G } from './game/state.js';
 import { loadProgress, P } from './game/progress.js';
 import { draw } from './render/index.js';
 import { update3d } from './render/scene3d.js';
+import * as DATA from './game/data.js';
 
 G.hasSave = loadProgress();
 if (G.hasSave){ G.best = P.best || 0; }
-window.G = G; window.P = P;   // debug/test handle
+window.G = G; window.P = P; window.D = DATA;   // debug/test handles
 
 let last=0;
 function frame(ts){

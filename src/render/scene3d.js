@@ -7,7 +7,8 @@
    ============================================================ */
 import { THREE, scene, camera, renderer, CAM_DIST,
          orderGroup, brewGroup, topGroup, cannoliGroup,
-         setHolidayLighting, place, mat } from './three.js';
+         setHolidayLighting, place, mat,
+         woodTexture, plasterTexture } from './three.js';
 import { VW, VH } from '../core/constants.js';
 import { G, currentHoliday } from '../game/state.js';
 import { buildOrder3D, updateOrder3D } from '../stations/order.js';
@@ -26,21 +27,25 @@ export function stationRoom3D(holidayWall){
   const g = new THREE.Group();
   // back wall, well behind z=0 for parallax
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(2400, 1200), mat('#efe4cf', {rough:0.98, noCache:true}));
+  wall.material.map = plasterTexture(6, 3);
   wall.position.set(0, 120, -420);
   wall.userData.wall = true;
   g.add(wall);
   // wainscot band across the wall
-  const band = new THREE.Mesh(new THREE.PlaneGeometry(2400, 150), mat('#b98a5a', {rough:0.9}));
+  const band = new THREE.Mesh(new THREE.PlaneGeometry(2400, 150), mat('#b98a5a', {rough:0.9, noCache:true}));
+  band.material.map = woodTexture(7, 0.6);
   band.position.set(0, -150, -418);
   g.add(band);
   // floor plane, laid flat, receding from foreground into the wall
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(2400, 900), mat('#7a4c28', {rough:0.85, noCache:true}));
+  floor.material.map = woodTexture(8, 3);
   floor.rotation.x = -Math.PI/2;
   floor.position.set(0, -230, -140);
   g.add(floor);
   // a warm ledge the props rest on, low and slightly back so it never
   // occludes anything placed near z=0
-  const ledge = new THREE.Mesh(new THREE.BoxGeometry(2400, 60, 90), mat('#8a5a2e', {rough:0.6}));
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(2400, 60, 90), mat('#8a5a2e', {rough:0.6, noCache:true}));
+  ledge.material.map = woodTexture(9, 0.4);
   ledge.position.set(0, -232, -30);
   g.add(ledge);
   g.userData.wall = wall;

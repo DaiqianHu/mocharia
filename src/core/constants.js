@@ -31,3 +31,16 @@ export function shade(hex, amt){ // lighten(+)/darken(-) a #rrggbb
   r=clamp(r,0,255); g=clamp(g,0,255); b=clamp(b,0,255);
   return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
 }
+
+/* weighted blend of #rrggbb colors: mixHex([[hex,weight],...]) */
+export function mixHex(pairs){
+  let r=0,g=0,b=0,w=0;
+  for (const [hex,wt] of pairs){
+    if (!hex || wt<=0) continue;
+    const n = parseInt(hex.slice(1),16);
+    r += (n>>16)*wt; g += ((n>>8)&255)*wt; b += (n&255)*wt; w += wt;
+  }
+  if (w<=0) return '#000000';
+  r=Math.round(r/w); g=Math.round(g/w); b=Math.round(b/w);
+  return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}

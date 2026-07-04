@@ -42,7 +42,12 @@ export function drawOrderStation(c){
   c.fillStyle='#c8a068'; rr(c,32,428,376,16,8); c.fill();
   // register
   c.fillStyle='#4a5a6a'; rr(c,306,382,74,52,8); c.fill();
+  c.strokeStyle='rgba(20,28,36,0.7)'; c.lineWidth=3; rr(c,306,382,74,52,8); c.stroke();
   c.fillStyle='#bfe8d8'; rr(c,314,390,58,20,4); c.fill();
+  c.strokeStyle='rgba(20,28,36,0.6)'; c.lineWidth=2; rr(c,314,390,58,20,4); c.stroke();
+  const rgl=c.createLinearGradient(314,390,314,410);
+  rgl.addColorStop(0,'rgba(255,255,255,0.55)'); rgl.addColorStop(1,'rgba(255,255,255,0)');
+  c.fillStyle=rgl; rr(c,316,392,54,9,3); c.fill();
   // customers
   const sorted=[...G.customers].sort((a,b)=>a.y-b.y);
   for (const cust of sorted) cust.draw(c,G.time);

@@ -43,6 +43,12 @@ function drawMachine(c, m, selected){
   const bg=c.createLinearGradient(0,m.y,0,m.y+74);
   bg.addColorStop(0,shade(bodyCol,20)); bg.addColorStop(1,shade(bodyCol,-16));
   c.fillStyle=bg; rr(c,m.x,m.y,m.w,74,12); c.fill();
+  c.strokeStyle='rgba(14,20,28,0.7)'; c.lineWidth=3; rr(c,m.x,m.y,m.w,74,12); c.stroke();
+  // big chunky gloss on the machine body
+  const mgl=c.createRadialGradient(m.x+m.w*0.28,m.y+16,1, m.x+m.w*0.28,m.y+16, m.w*0.4);
+  mgl.addColorStop(0,'rgba(255,255,255,0.4)'); mgl.addColorStop(1,'rgba(255,255,255,0)');
+  c.save(); rr(c,m.x,m.y,m.w,74,12); c.clip();
+  c.fillStyle=mgl; c.beginPath(); c.ellipse(m.x+m.w*0.3,m.y+18,m.w*0.28,20,-0.2,0,TAU); c.fill(); c.restore();
   if (selected){ c.strokeStyle='#ffd98a'; c.lineWidth=4; rr(c,m.x-3,m.y-3,m.w+6,220,14); c.stroke(); }
   // face plate: kind label + status lamp
   c.fillStyle='rgba(255,255,255,0.12)'; rr(c,m.x+10,m.y+10,m.w-20,24,6); c.fill();
@@ -101,7 +107,12 @@ function drawMachine(c, m, selected){
     c.fillText(''+k, xTR+5, gy);
   }
   c.setLineDash([]);
-  cupPath(); c.strokeStyle='rgba(240,250,255,0.8)'; c.lineWidth=2.6; c.stroke();
+  cupPath(); c.strokeStyle='rgba(40,26,16,0.5)'; c.lineWidth=4; c.lineJoin='round'; c.stroke();
+  cupPath(); c.strokeStyle='rgba(240,250,255,0.85)'; c.lineWidth=2.2; c.stroke();
+  const ghl=c.createRadialGradient(xTL+10,cupTop+18,1,xTL+10,cupTop+18,26);
+  ghl.addColorStop(0,'rgba(255,255,255,0.4)'); ghl.addColorStop(1,'rgba(255,255,255,0)');
+  c.save(); cupPath(); c.clip();
+  c.fillStyle=ghl; c.beginPath(); c.ellipse(xTL+14,cupTop+22,10,26,-0.1,0,TAU); c.fill(); c.restore();
   // timer / status
   c.textAlign='center'; c.textBaseline='middle';
   if (running){

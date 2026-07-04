@@ -130,38 +130,47 @@ export function drawContainer(c, s, x, y, held){
   c.save();
   c.translate(x,y);
   if (held) c.rotate(-0.35);
+  const outC='rgba(40,26,14,0.5)';
+  const gloss=(gx,gy,gr)=>{ const g=c.createRadialGradient(gx,gy,0,gx,gy,gr);
+    g.addColorStop(0,'rgba(255,255,255,0.8)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=g; c.beginPath(); c.ellipse(gx,gy,gr*0.55,gr,0,0,TAU); c.fill(); };
   if (s.cat==='whip'){
     // whipped-cream canister — cylindrical body: light-to-dark gradient + a glossy rim streak
     const bg=c.createLinearGradient(-13,0,13,0);
     bg.addColorStop(0,'#fbfaf6'); bg.addColorStop(0.4,'#e8e2d6'); bg.addColorStop(1,'#b8b0a0');
     c.fillStyle=bg; rr(c,-13,-22,26,44,7); c.fill();
-    c.fillStyle='rgba(255,255,255,0.55)'; rr(c,-9,-19,3.4,38,2); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2.4; rr(c,-13,-22,26,44,7); c.stroke();
+    gloss(-6,-8,9);
     const cg=c.createLinearGradient(-8,0,8,0);
-    cg.addColorStop(0,'#f0665a'); cg.addColorStop(0.5,'#d84a3a'); cg.addColorStop(1,'#a02c20');
+    cg.addColorStop(0,'#ff7a68'); cg.addColorStop(0.5,'#ec4a36'); cg.addColorStop(1,'#a82418');
     c.fillStyle=cg; rr(c,-8,-32,16,12,4); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2; rr(c,-8,-32,16,12,4); c.stroke();
     c.fillStyle='#b8b2a6'; rr(c,-3,-38,6,7,2); c.fill();
     const lg=c.createLinearGradient(-13,0,13,0);
-    lg.addColorStop(0,'#e8809a'); lg.addColorStop(1,'#a83a54');
+    lg.addColorStop(0,'#f28aa6'); lg.addColorStop(1,'#b03a58');
     c.fillStyle=lg; rr(c,-13,-6,26,14,2); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2; rr(c,-13,-6,26,14,2); c.stroke();
   } else if (s.cat==='drizzle'){
     // squeeze bottle — cylindrical gradient body + specular highlight + gradient cap
     const bg=c.createLinearGradient(-12,0,12,0);
-    bg.addColorStop(0, shade(s.item.color,55)); bg.addColorStop(0.42, s.item.color); bg.addColorStop(1, shade(s.item.color,-35));
+    bg.addColorStop(0, shade(s.item.color,60)); bg.addColorStop(0.42, shade(s.item.color,12)); bg.addColorStop(1, shade(s.item.color,-38));
     c.fillStyle=bg; rr(c,-12,-18,24,40,8); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2.4; rr(c,-12,-18,24,40,8); c.stroke();
     const ng=c.createLinearGradient(-12,0,12,0);
-    ng.addColorStop(0, shade(s.item.color,70)); ng.addColorStop(0.5, shade(s.item.color,30)); ng.addColorStop(1, shade(s.item.color,-10));
+    ng.addColorStop(0, shade(s.item.color,75)); ng.addColorStop(0.5, shade(s.item.color,34)); ng.addColorStop(1, shade(s.item.color,-12));
     c.fillStyle=ng; rr(c,-12,-18,24,14,8); c.fill();
-    c.fillStyle='rgba(255,255,255,0.5)'; rr(c,-8,-15,2.6,32,2); c.fill();
+    gloss(-6,-2,8);
     c.fillStyle='#3a2a1c'; c.beginPath();
     c.moveTo(-4,-18); c.lineTo(4,-18); c.lineTo(1.6,-34); c.lineTo(-1.6,-34); c.closePath(); c.fill();
+    c.strokeStyle=outC; c.lineWidth=1.6; c.stroke();
   } else {
     // sprinkle cup — translucent plastic gradient + individually shaded sprinkles
     const pg=c.createLinearGradient(0,-16,0,18);
     pg.addColorStop(0,'#fffdf8'); pg.addColorStop(1,'#e2d6bc');
     c.beginPath(); c.moveTo(-16,-16); c.lineTo(16,-16); c.lineTo(12,18); c.lineTo(-12,18); c.closePath();
     c.fillStyle=pg; c.fill();
-    c.strokeStyle='#c8b8a0'; c.lineWidth=2; c.stroke();
-    c.fillStyle='rgba(255,255,255,0.5)'; rr(c,-12,-13,3,26,1.5); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2.4; c.stroke();
+    gloss(-8,-2,7);
     for (let i=0;i<8;i++){
       c.save(); c.translate(-10+ (i%4)*6.6, -10+Math.floor(i/4)*7); c.rotate(i*1.3);
       const col=s.item.colors[i%s.item.colors.length];

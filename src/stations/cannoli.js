@@ -157,11 +157,17 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
   c.save(); c.translate(cx,cy); c.scale(scale,scale); c.translate(-cx,-cy);
   // shell tube
   const g=c.createLinearGradient(0,cy-r,0,cy+r);
-  g.addColorStop(0,'#e0a860'); g.addColorStop(0.5,'#c98a3e'); g.addColorStop(1,'#a06a28');
+  g.addColorStop(0,'#eaad5e'); g.addColorStop(0.5,'#cf8c38'); g.addColorStop(1,'#9c6420');
   c.fillStyle=g;
   rr(c,cx-len/2,cy-r,len,r*2,r*0.9); c.fill();
+  c.strokeStyle='rgba(70,40,14,0.6)'; c.lineWidth=3; rr(c,cx-len/2,cy-r,len,r*2,r*0.9); c.stroke();
+  // big chunky gloss along the top of the shell
+  const shl=c.createLinearGradient(0,cy-r,0,cy);
+  shl.addColorStop(0,'rgba(255,255,255,0.5)'); shl.addColorStop(1,'rgba(255,255,255,0)');
+  c.save(); rr(c,cx-len/2,cy-r,len,r*2,r*0.9); c.clip();
+  c.fillStyle=shl; rr(c,cx-len/2+6,cy-r+3,len-12,r*0.7,r*0.4); c.fill(); c.restore();
   // flaky ridges
-  c.strokeStyle='rgba(120,70,26,0.4)'; c.lineWidth=2.4;
+  c.strokeStyle='rgba(110,62,20,0.5)'; c.lineWidth=2.4;
   for(let i=-2;i<=2;i++){
     c.beginPath(); c.moveTo(cx+i*len*0.16, cy-r+6);
     c.quadraticCurveTo(cx+i*len*0.16+12, cy, cx+i*len*0.16, cy+r-6); c.stroke();
@@ -177,17 +183,24 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
       continue;
     }
     const ex=cx+dir*len/2;
-    c.fillStyle=cn.cream.color;
+    const creamCol=shade(cn.cream.color,10);
     // cream disc grows with fill, then puffs outward
     const rr_ = r*0.82*Math.min(1,fill*1.6);
+    c.fillStyle=creamCol;
     c.beginPath(); c.ellipse(ex, cy, 10+fill*10, rr_, 0, 0, TAU); c.fill();
+    c.strokeStyle=shade(cn.cream.color,-34); c.lineWidth=2;
+    c.beginPath(); c.ellipse(ex, cy, 10+fill*10, rr_, 0, 0, TAU); c.stroke();
     if (fill>0.55){
       const puff=(fill-0.55)/0.45;
+      c.fillStyle=creamCol;
       c.beginPath();
       c.arc(ex+dir*(8+puff*10), cy-8, 8*puff+3, 0, TAU);
       c.arc(ex+dir*(10+puff*13), cy+7, 7*puff+2.5, 0, TAU);
       c.fill();
     }
+    const chl=c.createRadialGradient(ex,cy-rr_*0.4,0,ex,cy-rr_*0.4,rr_*0.7);
+    chl.addColorStop(0,'rgba(255,255,255,0.5)'); chl.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=chl; c.beginPath(); c.ellipse(ex,cy-rr_*0.35,6+fill*4,rr_*0.5,0,0,TAU); c.fill();
     if (cn.cream.speckle){
       c.fillStyle=cn.cream.speckle;
       for(let i=0;i<5;i++){

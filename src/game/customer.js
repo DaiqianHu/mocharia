@@ -77,18 +77,23 @@ export class Customer {
     c.beginPath(); c.ellipse(0, 66-bob, 22, 6, 0, 0, TAU); c.fill();
     // legs + shoes (alternate lift while walking or stomping) — lit left, shadowed right
     const lift = this.walking ? walkA*4 : (angry ? Math.sin(this.stompT*Math.PI)*5 : 0);
+    const outC='rgba(30,18,10,0.55)';
     const legL = c.createLinearGradient(-13,0,-2,0);
     legL.addColorStop(0, shade(this.pants,16)); legL.addColorStop(1, shade(this.pants,-14));
     c.fillStyle=legL; rr(c,-13, 26, 11, 36 - Math.max(0,lift), 5); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2; rr(c,-13, 26, 11, 36 - Math.max(0,lift), 5); c.stroke();
     const legR = c.createLinearGradient(2,0,13,0);
     legR.addColorStop(0, shade(this.pants,2)); legR.addColorStop(1, shade(this.pants,-30));
     c.fillStyle=legR; rr(c,  2, 26, 11, 36 + Math.min(0,lift), 5); c.fill();
+    rr(c,  2, 26, 11, 36 + Math.min(0,lift), 5); c.stroke();
     const shoeL = c.createLinearGradient(0,58,0,66);
     shoeL.addColorStop(0,'#453a30'); shoeL.addColorStop(1,'#181410');
     c.fillStyle=shoeL; rr(c,-15, 58-Math.max(0,lift), 15, 8, 4); c.fill();
+    rr(c,-15, 58-Math.max(0,lift), 15, 8, 4); c.stroke();
     const shoeR = c.createLinearGradient(0,58,0,66);
     shoeR.addColorStop(0,'#332a22'); shoeR.addColorStop(1,'#100d0a');
     c.fillStyle=shoeR; rr(c,  0, 58+Math.min(0,lift), 15, 8, 4); c.fill();
+    rr(c,  0, 58+Math.min(0,lift), 15, 8, 4); c.stroke();
     // torso — vertical light-from-above gradient, plus a horizontal rim-light/AO
     // pass to read as a rounded volume rather than a flat rectangle
     const bg = c.createLinearGradient(0,-18,0,30);
@@ -104,10 +109,12 @@ export class Customer {
     torsoAo.addColorStop(0,'rgba(20,10,4,0)'); torsoAo.addColorStop(1,'rgba(20,10,4,0.26)');
     c.fillStyle=torsoAo; c.fillRect(2,-18,15,48);
     c.restore();
+    c.strokeStyle=outC; c.lineWidth=2.6; rr(c,-17,-18,34,48,10); c.stroke();
     // arms — swing at sides; angry: fists on hips
     c.fillStyle = shade(this.shirt,-8);
     if (angry){
-      rr(c,-24,-12,8,24,4); c.fill(); rr(c,16,-12,8,24,4); c.fill();
+      rr(c,-24,-12,8,24,4); c.fill(); c.strokeStyle=outC; c.lineWidth=2; c.stroke();
+      rr(c,16,-12,8,24,4); c.fill(); rr(c,16,-12,8,24,4); c.stroke();
       const hg=c.createRadialGradient(-21,10,1,-20,12,6);
       hg.addColorStop(0,shade(this.skin,20)); hg.addColorStop(1,shade(this.skin,-14));
       c.fillStyle=hg; c.beginPath(); c.arc(-20,12,5,0,TAU); c.fill();
@@ -116,7 +123,8 @@ export class Customer {
       c.fillStyle=hg2; c.beginPath(); c.arc(20,12,5,0,TAU); c.fill();
     } else {
       const sw = this.walking ? walkA*5 : Math.sin(t*2.4+this.bobPhase)*1;
-      rr(c,-24,-14+sw,8,32,4); c.fill(); rr(c,16,-14-sw,8,32,4); c.fill();
+      rr(c,-24,-14+sw,8,32,4); c.fill(); c.strokeStyle=outC; c.lineWidth=2; c.stroke();
+      rr(c,16,-14-sw,8,32,4); c.fill(); rr(c,16,-14-sw,8,32,4); c.stroke();
       const hg=c.createRadialGradient(-21,18+sw,1,-20,20+sw,6);
       hg.addColorStop(0,shade(this.skin,20)); hg.addColorStop(1,shade(this.skin,-14));
       c.fillStyle=hg; c.beginPath(); c.arc(-20,20+sw,4.4,0,TAU); c.fill();
@@ -133,8 +141,10 @@ export class Customer {
     hg.addColorStop(1, shade(this.skin,-24));
     c.fillStyle = hg;
     c.beginPath(); c.ellipse(0,-42,15,17,0,0,TAU); c.fill();
-    c.fillStyle='rgba(255,255,255,0.22)';
-    c.beginPath(); c.ellipse(-7,-49,3.4,2.4,0.5,0,TAU); c.fill();
+    c.strokeStyle=outC; c.lineWidth=2.4; c.beginPath(); c.ellipse(0,-42,15,17,0,0,TAU); c.stroke();
+    const headHl=c.createRadialGradient(-6,-49,0,-6,-49,10);
+    headHl.addColorStop(0,'rgba(255,255,255,0.6)'); headHl.addColorStop(1,'rgba(255,255,255,0)');
+    c.fillStyle=headHl; c.beginPath(); c.ellipse(-6,-48,6,5,0.4,0,TAU); c.fill();
     // ears
     c.beginPath(); c.arc(-15,-42,3.4,0,TAU); c.arc(15,-42,3.4,0,TAU); c.fill();
     // hair styles

@@ -23,6 +23,7 @@ import './input.js';         // registers pointer listeners
 import { update, G } from './game/state.js';
 import { loadProgress, P } from './game/progress.js';
 import { draw } from './render/index.js';
+import { update3d } from './render/scene3d.js';
 
 G.hasSave = loadProgress();
 if (G.hasSave){ G.best = P.best || 0; }
@@ -33,6 +34,7 @@ function frame(ts){
   const dt=Math.min(0.05, last ? (ts-last)/1000 : 0.016);
   last=ts;
   update(dt);
+  update3d();   // sync + render the WebGL scene (play only), then the 2D HUD
   draw();
   requestAnimationFrame(frame);
 }

@@ -10,7 +10,7 @@ import { blip, hiss } from '../core/audio.js';
 import { CANNOLI, RAIL_H } from '../game/layout.js';
 import { G, unlockedNow } from '../game/state.js';
 import { BT } from '../game/buttons.js';
-import { drawStationRoom } from '../render/scene.js';
+import { drawStationLabel } from '../render/scene.js';
 import { drawContainer } from './top.js';
 
 /* shelf: cream piping bags + one sprinkle cup per unlocked set */
@@ -40,6 +40,7 @@ function endAt(px,py){
 }
 
 let emitAcc=0;
+const MAX_END_SPRINKLES=48;
 
 export function updateCannoli(dt){
   const t=G.active, drag=G.drag;
@@ -71,7 +72,7 @@ export function updateCannoli(dt){
     const dots = end==='L'?cn.dotsL:cn.dotsR;
     const col = choice(drag.item.colors);
     dots.push({a:rand(0,TAU), rr:rand(0,1), rot:rand(0,TAU), color:col});
-    if (dots.length>22) dots.shift();
+    if (dots.length>MAX_END_SPRINKLES) dots.shift();
     spawnParticle({type:'sprinkle', x:p.x+rand(-6,6), y:p.y+12, vy:rand(80,130), g:460,
       size:rand(2.2,3.2), color:col, life:0.7, vr:rand(-8,8), settleY:CANNOLI.cy+rand(-10,10)});
   }
@@ -85,7 +86,7 @@ export function scrapeCannoli(){
 }
 
 export function drawCannoliStation(c){
-  drawStationRoom(c,'Cannoli Station');
+  drawStationLabel(c,'Cannoli Station');
   const t=G.active;
   if (t && !t.cannoli){
     c.fillStyle='rgba(42,22,12,0.8)'; rr(c,180,250,380,60,12); c.fill();
@@ -94,17 +95,9 @@ export function drawCannoliStation(c){
     c.fillText('No cannoli on this order — skip ahead!', 370, 280);
     return;
   }
-  // plate
   const {cx,cy,len,r}=CANNOLI;
-  c.fillStyle='rgba(30,14,8,0.25)';
-  c.beginPath(); c.ellipse(cx,cy+r+26,len*0.62,20,0,0,TAU); c.fill();
-  c.fillStyle='#f0e8da';
-  c.beginPath(); c.ellipse(cx,cy+r+18,len*0.60,26,0,0,TAU); c.fill();
-  c.strokeStyle='#c8b8a0'; c.lineWidth=2;
-  c.beginPath(); c.ellipse(cx,cy+r+18,len*0.60,26,0,0,TAU); c.stroke();
-  if (t) drawCannoli(c, t.cannoli, cx, cy, len, r, 1);
-  // shelf
-  c.fillStyle='#6a4a2c'; c.font='800 14px Verdana, sans-serif';
+  // shelf (2D tool palette over the 3D cannoli)
+  c.fillStyle='#f0e2c8'; c.font='800 14px Verdana, sans-serif';
   c.textAlign='left'; c.textBaseline='top';
   c.fillText('CREAMS & SPRINKLES', 44, 156);
   for (const s of cannoliShelf()){
@@ -218,4 +211,123 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
     }
   }
   c.restore();
+}
+
+/* ============================================================
+   3D cannoli. A golden ridged pastry tube laid along the X axis with
+   flaky ridge rings; cream at each end is a scale-from-fill blob that
+   bulges outward; end sprinkles are a small per-end InstancedMesh. A
+   shallow board sits under it. Empty ends show a dark cap. End
+   hit-testing still uses the virtual-coord endAt() (shell sits at z≈0).
+   ============================================================ */
+import { THREE, place, mat, shadowDecal } from '../render/three.js';
+import { stationRoom3D } from '../render/scene3d.js';
+
+let can3d = null;
+
+export function buildCannoli3D(group){
+  group.add(stationRoom3D());
+  const {cx,cy,len,r} = CANNOLI;
+  const g = new THREE.Group();
+  place(g, cx, cy, 12);
+  group.add(g);
+
+  const sh = shadowDecal(len*0.62, 34); sh.position.set(0,-r-6,0); g.add(sh);
+
+  // serving board
+  const board = new THREE.Mesh(new THREE.BoxGeometry(len*1.15, 14, 60),
+    mat('#f0e8da',{rough:0.7, noCache:true}));
+  board.position.set(0,-r-2,-4); g.add(board);
+
+  // shell tube (golden pastry), axis along X
+  const shellGeo = new THREE.CylinderGeometry(r, r, len, 32, 1, true);
+  shellGeo.rotateZ(Math.PI/2);
+  const shell = new THREE.Mesh(shellGeo, mat('#cf8c38',{rough:0.55, noCache:true}));
+  g.add(shell);
+  // inner dark tube (seen through the open ends)
+  const innerGeo = new THREE.CylinderGeometry(r-6, r-6, len-2, 24, 1, true);
+  innerGeo.rotateZ(Math.PI/2);
+  const inner = new THREE.Mesh(innerGeo, mat('#5a3a20',{rough:0.8, noCache:true}));
+  inner.material.side = THREE.BackSide; g.add(inner);
+  // flaky ridge rings around the tube
+  for (let i=-2;i<=2;i++){
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r+1, 3, 8, 28),
+      mat('#a86e28',{rough:0.6}));
+    ring.rotation.y = Math.PI/2;          // wrap around X axis
+    ring.position.x = i*len*0.18; g.add(ring);
+  }
+  // rim highlights at each mouth
+  const rimMat = mat('#eac06a',{rough:0.4});
+  for (const dir of [-1,1]){
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(r-1, 3, 8, 28), rimMat);
+    rim.rotation.y = Math.PI/2; rim.position.x = dir*len/2; g.add(rim);
+  }
+
+  // dark end caps (shown when an end has no cream)
+  const caps = {}, creams = {}, sprs = {};
+  for (const key of ['L','R']){
+    const dir = key==='L' ? -1 : 1;
+    const cap = new THREE.Mesh(new THREE.CircleGeometry(r-4, 24), mat('#42260f',{rough:0.9}));
+    cap.rotation.y = dir*Math.PI/2; cap.position.x = dir*(len/2-1); g.add(cap);
+    caps[key] = cap;
+    // cream blob
+    const cream = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 16),
+      mat('#f4e3c0',{rough:0.5, noCache:true}));
+    cream.visible = false; g.add(cream);
+    creams[key] = cream;
+    // end sprinkles
+    const spr = new THREE.InstancedMesh(new THREE.BoxGeometry(7.5,2.8,2.8),
+      new THREE.MeshStandardMaterial({roughness:0.5}), MAX_END_SPRINKLES);
+    spr.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_END_SPRINKLES*3),3);
+    spr.count = 0; spr.renderOrder = 3; g.add(spr);
+    sprs[key] = spr;
+  }
+
+  can3d = { g, shell, inner, caps, creams, sprs };
+}
+
+export function updateCannoli3D(){
+  if (!can3d) return;
+  const t = G.active;
+  const on = !!(t && t.cannoli);
+  can3d.g.visible = on;
+  if (!on) return;
+  const cn = t.cannoli;
+  const {len,r} = CANNOLI;
+  for (const key of ['L','R']){
+    const dir = key==='L' ? -1 : 1;
+    const fill = key==='L' ? cn.fillL : cn.fillR;
+    const cream = can3d.creams[key], cap = can3d.caps[key], spr = can3d.sprs[key];
+    if (cn.cream && fill>0.001){
+      cream.visible = true;
+      cream.material.color.set(cn.cream.color);
+      const ry = r*0.82*Math.min(1, fill*1.6);
+      const bulge = 8 + fill*22;
+      cream.scale.set(bulge, ry, ry);
+      cream.position.set(dir*(len/2) + dir*fill*10, 0, 0);
+      cap.visible = false;
+      // sprinkles spread across the camera-facing surface of the cream dome
+      const dots = key==='L' ? cn.dotsL : cn.dotsR;
+      spr.count = dots.length;
+      const cxk = dir*(len/2) + dir*fill*10;   // cream-bulge centre x
+      const m = new THREE.Matrix4(), col = new THREE.Color();
+      for (let i=0;i<dots.length;i++){
+        const d = dots[i];
+        const u = Math.sqrt(d.rr);
+        const ox = Math.cos(d.a)*bulge*0.72*u;         // across bulge width
+        const oy = Math.sin(d.a)*ry*0.78*u;            // vertical
+        const zt = 1 - (ox/bulge)**2 - (oy/ry)**2;     // ellipsoid front surface
+        const oz = Math.sqrt(Math.max(0.04, zt))*ry;
+        m.makeRotationX(d.rot);
+        m.multiply(new THREE.Matrix4().makeRotationY(d.rot*0.6));
+        m.setPosition(cxk + ox, oy, oz + 2);
+        spr.setMatrixAt(i, m);
+        col.set(d.color); spr.setColorAt(i, col);
+      }
+      spr.instanceMatrix.needsUpdate = true;
+      if (spr.instanceColor) spr.instanceColor.needsUpdate = true;
+    } else {
+      cream.visible = false; cap.visible = true; spr.count = 0;
+    }
+  }
 }

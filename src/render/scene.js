@@ -75,6 +75,11 @@ export function drawShopBackdrop(c){
 export function drawStationRoom(c, title){
   drawShopBackdrop(c);
   drawWood(c, 440, TABS_Y-440);
+  drawStationLabel(c, title);
+}
+
+/* the HUD title card (kept 2D over the WebGL scene) */
+export function drawStationLabel(c, title){
   c.fillStyle='rgba(42,22,12,0.82)';
   rr(c,14,RAIL_H+10,240,36,10); c.fill();
   c.fillStyle='#ffe9b8';

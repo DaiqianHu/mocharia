@@ -11,7 +11,7 @@ import { TOP_CUP, RAIL_H } from '../game/layout.js';
 import { COV_BINS } from '../game/ticket.js';
 import { G, unlockedNow } from '../game/state.js';
 import { BT } from '../game/buttons.js';
-import { drawStationRoom, drawCup } from '../render/scene.js';
+import { drawStationLabel } from '../render/scene.js';
 
 /* ---- the shelf of containers (rebuilt as unlocks change) ---- */
 export function topShelf(){
@@ -47,8 +47,11 @@ export function updateTop(dt){
   const t=G.active, drag=G.drag;
   if (!t || !drag || G.station!=='top') return;
   const p=G.pointer;
-  if (!p.down || !overCup(p.x,p.y)) return;
-  const rx = relX(p.x), tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
+  if (!p.down) return;
+  // the drop zone is the raycast cup-plane (source of truth for relX)
+  const hit = hitTestScene(p.x, p.y, 'top');
+  if (!hit || hit.kind!=='cup') return;
+  const rx = hit.relX, tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
   emitAcc += dt;
   if (drag.cat==='whip'){
     if (emitAcc<0.05) return; emitAcc=0;
@@ -89,11 +92,10 @@ export function clearToppings(){
 }
 
 export function drawTopStation(c){
-  drawStationRoom(c,'Topping Station');
+  drawStationLabel(c,'Topping Station');
   const t=G.active;
-  drawCup(c, TOP_CUP, t, {});
-  // shelf
-  c.fillStyle='#6a4a2c'; c.font='800 14px Verdana, sans-serif';
+  // shelf of containers (2D tool palette over the 3D cup)
+  c.fillStyle='#f0e2c8'; c.font='800 14px Verdana, sans-serif';
   c.textAlign='left'; c.textBaseline='top';
   c.fillText('GRAB A TOPPING', 44, 156);
   const shelf = topShelf();
@@ -193,4 +195,224 @@ export function shelfHit(x,y){
   for (const s of topShelf())
     if (Math.abs(x-s.x)<34 && Math.abs(y-s.y)<38) return s;
   return null;
+}
+
+/* ============================================================
+   3D cup + toppings. The cup shell is a lathed translucent glass;
+   fluids are scale-from-anchor cylinders (coffee then milk); whip is
+   an InstancedMesh of blobs; drizzle a rebuilt tube; sprinkles an
+   InstancedMesh with per-instance color. The drop-zone collider plane
+   feeds relX back to updateTop() via the raycaster.
+   ============================================================ */
+import { THREE, place, mat, shadowDecal, colliders, hitTestScene, colliderMaterial } from '../render/three.js';
+import { stationRoom3D } from '../render/scene3d.js';
+
+const CUPH = TOP_CUP.h, CUPTOPR = TOP_CUP.w/2, CUPBOTR = TOP_CUP.w*0.78/2;
+const FLUID_INSET = 3;   // keep fluid just inside the glass wall
+const BASE_Y = 8;        // cup inner floor (where the wall reaches full CUPBOTR)
+const COFFEE_R = CUPBOTR - FLUID_INSET;   // circular-prism radius (fits the cup base)
+let cup3d = null;
+
+// radius of the glass at height y (0..CUPH), matching cupProfile()
+function cupRadiusAt(y){
+  const yy = Math.max(0, Math.min(CUPH, y));
+  if (yy<=8) return CUPBOTR*0.55 + (CUPBOTR - CUPBOTR*0.55)*(yy/8);
+  return CUPBOTR + (CUPTOPR - CUPBOTR)*((yy-8)/(CUPH-8));
+}
+// a fluid layer from height y0 to y1 whose walls follow the cup taper
+function fluidFrustum(y0, y1){
+  const h = Math.max(0.001, y1-y0);
+  const r0 = Math.max(0.5, cupRadiusAt(y0)-FLUID_INSET);
+  const r1 = Math.max(0.5, cupRadiusAt(y1)-FLUID_INSET);
+  const g = new THREE.CylinderGeometry(r1, r0, h, 28, 1, false);
+  g.translate(0, y0 + h/2, 0);
+  return g;
+}
+// a straight circular prism (flat top & bottom) sitting on the cup floor
+function coffeePrism(y0, y1){
+  const h = Math.max(0.001, y1-y0);
+  const g = new THREE.CylinderGeometry(COFFEE_R, COFFEE_R, h, 28, 1, false);
+  g.translate(0, y0 + h/2, 0);
+  return g;
+}
+
+function cupProfile(){
+  // lathe profile points (x=radius, y from 0 at base to CUPH at rim)
+  const pts = [];
+  pts.push(new THREE.Vector2(0, 0));
+  pts.push(new THREE.Vector2(CUPBOTR*0.55, 0));
+  pts.push(new THREE.Vector2(CUPBOTR, 8));
+  pts.push(new THREE.Vector2(CUPTOPR, CUPH));
+  pts.push(new THREE.Vector2(CUPTOPR-2, CUPH));   // rim inner
+  return pts;
+}
+
+export function buildTop3D(group){
+  group.add(stationRoom3D());
+
+  const cup = new THREE.Group();
+  place(cup, TOP_CUP.cx, TOP_CUP.by, 20);
+  group.add(cup);
+
+  const shadow = shadowDecal(CUPTOPR*1.5, CUPTOPR*0.7);
+  shadow.position.set(0,1,0);
+  cup.add(shadow);
+
+  // fluids (geometry rebuilt to follow the cup taper when the fill changes)
+  const coffeeMat = mat('#3a2317', {rough:0.5, noCache:true});
+  const milkMat   = mat('#f4ecdb', {rough:0.5, noCache:true});
+  const coffee = new THREE.Mesh(new THREE.BufferGeometry(), coffeeMat);
+  const milk   = new THREE.Mesh(new THREE.BufferGeometry(), milkMat);
+  coffee.visible = milk.visible = false;
+  cup.add(coffee, milk);
+
+  // glass shell (translucent, drawn over fluids)
+  const shellGeo = new THREE.LatheGeometry(cupProfile(), 36);
+  const shellMat = new THREE.MeshStandardMaterial({
+    color:0xdfeef5, roughness:0.15, metalness:0, transparent:true, opacity:0.26,
+    depthWrite:false, side:THREE.DoubleSide });
+  const shell = new THREE.Mesh(shellGeo, shellMat);
+  shell.renderOrder = 5;
+  cup.add(shell);
+  // rim ring
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(CUPTOPR, 3, 8, 36),
+    mat('#eaf4fa',{rough:0.2,metal:0.1}));
+  rim.rotation.x = Math.PI/2; rim.position.y = CUPH; rim.renderOrder = 6;
+  cup.add(rim);
+
+  // whip: instanced spheres
+  const whip = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8),
+    mat('#fffdf6',{rough:0.6, noCache:true}), 26);
+  whip.count = 0; whip.renderOrder = 7;
+  cup.add(whip);
+
+  // sprinkles: instanced rounded boxes with per-instance color
+  const spr = new THREE.InstancedMesh(new THREE.BoxGeometry(6.5,2.4,2.4),
+    new THREE.MeshStandardMaterial({roughness:0.5}), 70);
+  spr.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(70*3),3);
+  spr.count = 0; spr.renderOrder = 8;
+  cup.add(spr);
+
+  // drizzle tube (geometry rebuilt on throttle)
+  const drizMat = mat('#4a2c17',{rough:0.35, noCache:true});
+  const driz = new THREE.Mesh(new THREE.BufferGeometry(), drizMat);
+  driz.renderOrder = 8;
+  cup.add(driz);
+
+  // ice cubes (shown for cold drinks)
+  const ice = new THREE.Group();
+  for (let i=0;i<3;i++){
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(16,16,16),
+      new THREE.MeshStandardMaterial({color:0xdff0ff, roughness:0.1, transparent:true, opacity:0.6}));
+    cube.rotation.set(rand(0,1),rand(0,1),rand(0,1));
+    ice.add(cube);
+  }
+  cup.add(ice);
+
+  // drop-zone collider plane (feeds relX). worldToLocal(hit).x / w -> -0.5..0.5
+  const zone = new THREE.Mesh(new THREE.PlaneGeometry(TOP_CUP.w, CUPH+140), colliderMaterial());
+  zone.userData.w = TOP_CUP.w;
+  place(zone, TOP_CUP.cx, TOP_CUP.by - CUPH/2 - 30, 40);
+  group.add(zone);
+  colliders.cupZone = zone;
+
+  cup3d = { cup, coffee, milk, shell, whip, spr, driz, drizMat, coffeeMat, milkMat, ice };
+}
+
+const UNIT = 1/6.5;
+const USABLE = CUPH - BASE_Y;   // fillable height above the cup floor
+let drizKey = '', coffeeKey = '', milkKey = '';
+
+export function updateTop3D(){
+  if (!cup3d) return;
+  const t = G.active;
+  const { coffee, milk, shell, whip, spr, driz, coffeeMat, milkMat, ice } = cup3d;
+  shell.visible = true;
+  const cc = t ? t.cup.coffee : null;
+  const mm = t ? t.cup.milk : null;
+
+  let topY = BASE_Y;   // running surface height
+  if (cc){
+    coffee.visible = true; coffeeMat.color.set(cc.type.color);
+    // coffee is a circular prism whose height tracks the shots poured
+    const f = Math.min(1, cc.amt*UNIT);
+    const y1 = BASE_Y + f*USABLE;
+    const key = f.toFixed(3);
+    if (key !== coffeeKey){
+      coffeeKey = key;
+      coffee.geometry.dispose();
+      coffee.geometry = coffeePrism(BASE_Y, y1);
+    }
+    topY = y1;
+  } else { coffee.visible = false; coffeeKey = ''; }
+  if (mm){
+    milk.visible = true; milkMat.color.set(mm.type.color);
+    const f = Math.min((CUPH-topY)/USABLE, mm.amt*UNIT);
+    const y1 = topY + f*USABLE;
+    const key = topY.toFixed(2)+'|'+f.toFixed(3);
+    if (key !== milkKey){
+      milkKey = key;
+      milk.geometry.dispose();
+      milk.geometry = fluidFrustum(topY, y1);
+    }
+    topY = y1;
+  } else { milk.visible = false; milkKey = ''; }
+  const surfY = topY;
+
+  // ice
+  const iced = (cc && cc.temp==='iced') || (mm && mm.temp==='cold');
+  ice.visible = iced && surfY>BASE_Y;
+  if (ice.visible){
+    for (let i=0;i<ice.children.length;i++){
+      const c=ice.children[i];
+      c.position.set((i-1)*CUPTOPR*0.5, Math.max(14,surfY-10)+Math.sin(G.time*1.5+i)*2, 6);
+      c.rotation.y += 0.003;
+    }
+  }
+
+  // whip
+  const tp = t ? t.top : null;
+  const baseY = Math.max(surfY, 14);
+  if (tp && tp.whip.blobs.length){
+    whip.count = tp.whip.blobs.length;
+    const m = new THREE.Matrix4();
+    for (let i=0;i<whip.count;i++){
+      const b=tp.whip.blobs[i], r=b.size*TOP_CUP.w;
+      m.makeTranslation(b.x*TOP_CUP.w, baseY+4, 8);
+      m.scale(new THREE.Vector3(r,r*0.9,r));
+      whip.setMatrixAt(i,m);
+    }
+    whip.instanceMatrix.needsUpdate = true;
+  } else whip.count = 0;
+
+  const crownY = baseY + (tp && tp.whip.blobs.length ? 20 : 4);
+
+  // drizzle
+  if (tp && tp.drizzle && tp.drizzle.pts.length>1){
+    cup3d.drizMat.color.set(tp.drizzle.item.color);
+    const key = tp.drizzle.item.id+'|'+tp.drizzle.pts.length;
+    if (key!==drizKey){
+      drizKey = key;
+      const pts = tp.drizzle.pts.map(p=> new THREE.Vector3(p.x*TOP_CUP.w, crownY+p.y*0.4, 11));
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const geo = new THREE.TubeGeometry(curve, Math.min(80,pts.length*2), 2.6, 6, false);
+      driz.geometry.dispose(); driz.geometry = geo;
+    }
+    driz.visible = true;
+  } else { driz.visible = false; drizKey=''; }
+
+  // sprinkles
+  if (tp && tp.sprinkles && tp.sprinkles.dots.length){
+    spr.count = tp.sprinkles.dots.length;
+    const m = new THREE.Matrix4(); const col = new THREE.Color();
+    for (let i=0;i<spr.count;i++){
+      const d=tp.sprinkles.dots[i];
+      m.makeRotationZ(d.rot);
+      m.setPosition(d.x*TOP_CUP.w, crownY+d.y*0.4, 12);
+      spr.setMatrixAt(i,m);
+      col.set(d.color); spr.setColorAt ? spr.setColorAt(i,col) : null;
+    }
+    spr.instanceMatrix.needsUpdate = true;
+    if (spr.instanceColor) spr.instanceColor.needsUpdate = true;
+  } else spr.count = 0;
 }

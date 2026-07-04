@@ -56,18 +56,11 @@ fillLight.position.set(320, 120, 360);
 scene.add(hemi, keyLight, fillLight);
 
 export function setHolidayLighting(h){
-  if (h && h.id==='halloween'){
-    hemi.color.set(0xb99cff); hemi.groundColor.set(0x3a2440); hemi.intensity=0.9;
-    keyLight.color.set(0xffb060); keyLight.intensity=1.1;
-    fillLight.color.set(0x9a6aff);
-  } else if (h && h.id==='christmas'){
-    hemi.color.set(0xdbe8ff); hemi.groundColor.set(0x1c3048); hemi.intensity=0.95;
-    keyLight.color.set(0xfff2e0); keyLight.intensity=1.1;
-    fillLight.color.set(0x9ad0ff);
-  } else if (h && h.id==='bday'){
-    hemi.color.set(0xffe0f0); hemi.groundColor.set(0x5a2a4a); hemi.intensity=0.95;
-    keyLight.color.set(0xfff0d8); keyLight.intensity=1.15;
-    fillLight.color.set(0xff9ad0);
+  if (h && h.light){
+    // per-holiday palette lives in data.js HOLIDAYS[].light
+    hemi.color.set(h.light.hemi); hemi.groundColor.set(h.light.ground); hemi.intensity=0.92;
+    keyLight.color.set(h.light.key); keyLight.intensity=1.1;
+    fillLight.color.set(h.light.fill); fillLight.intensity=0.5;
   } else {
     hemi.color.set(0xffffff); hemi.groundColor.set(0x4a3a2a); hemi.intensity=0.95;
     keyLight.color.set(0xffffff); keyLight.intensity=1.15;

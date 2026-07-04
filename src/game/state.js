@@ -5,7 +5,7 @@
    States: title -> dayIntro -> play -> summary -> shop -> dayIntro
    ============================================================ */
 import { VW, clamp, rand } from '../core/constants.js';
-import { updateParticles, spawnParticle, confettiBurst, popText } from '../core/particles.js';
+import { updateParticles, updateAmbient, spawnParticle, confettiBurst, popText } from '../core/particles.js';
 import { blip, ding, chaChing, starChime, fanfare, pour } from '../core/audio.js';
 import { MACHINES } from './layout.js';
 import { COFFEE_TIME, MILK_TIME, customersForDay } from './data.js';
@@ -135,6 +135,8 @@ function endDay(){
 export function update(dt){
   G.time += dt;
   updateParticles(dt);
+  // holiday weather (snow / petals / confetti…) drifts over play + day intro
+  updateAmbient(dt, (G.state==='play' || G.state==='dayIntro') ? currentHoliday() : null);
   if (G.shake>0){
     G.shake = Math.max(0, G.shake - dt*22);
     G.shakeX = rand(-G.shake,G.shake); G.shakeY = rand(-G.shake,G.shake);

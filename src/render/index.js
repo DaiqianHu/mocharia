@@ -7,7 +7,7 @@ import { VW, VH } from '../core/constants.js';
 import { TABS_Y } from '../game/layout.js';
 import { G } from '../game/state.js';
 import { BT } from '../game/buttons.js';
-import { drawParticles, drawFloats } from '../core/particles.js';
+import { drawParticles, drawFloats, drawAmbient } from '../core/particles.js';
 import { drawOrderStation } from '../stations/order.js';
 import { drawBrewStation } from '../stations/brew.js';
 import { drawTopStation } from '../stations/top.js';
@@ -52,6 +52,7 @@ export function draw(){
     if (G.result) drawResult(ctx);
   }
   BT.mute.draw(ctx);
+  drawAmbient(ctx);
   drawParticles(ctx);
   drawFloats(ctx);
   ctx.restore();

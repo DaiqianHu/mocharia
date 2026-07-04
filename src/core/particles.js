@@ -1,7 +1,7 @@
 /* ============================================================
    Particle system and floating score/text popups.
    ============================================================ */
-import { TAU, rand, clamp, choice, rr } from './constants.js';
+import { TAU, rand, clamp, choice, rr, VW, VH } from './constants.js';
 
 export const particles = [];
 export const floats = [];
@@ -80,6 +80,73 @@ export function drawFloats(c){
     c.lineWidth = 5; c.strokeStyle = 'rgba(40,20,10,0.85)'; c.lineJoin='round';
     c.strokeText(f.text, f.x, f.y);
     c.fillStyle = f.color; c.fillText(f.text, f.x, f.y);
+    c.restore();
+  }
+}
+
+/* ---- ambient holiday weather ----
+   A steady drift of themed shapes (snow, petals, leaves, confetti,
+   glyphs like ♥ ☘ ♪ ★) across the whole screen, driven by the active
+   holiday's `ambient` def in data.js. Recycles a fixed pool instead
+   of spawning/killing, so it costs nothing to leave running.       */
+export const ambient = [];
+let ambientId = null;
+
+function ambientDrop(def, anywhere){
+  const a = {
+    kind: def.kind,
+    x: rand(-10, VW+10),
+    y: anywhere ? rand(-30, VH) : rand(-40, -12),
+    vy: rand(26, 62), vx: rand(-12, 12),
+    sway: rand(10, 34), phase: rand(0, TAU),
+    rot: rand(0, TAU), vr: rand(-2.2, 2.2),
+    size: rand(4, 8),
+    color: choice(def.colors),
+    glyph: def.glyphs ? choice(def.glyphs) : null,
+    alpha: rand(0.4, 0.75),
+  };
+  if (def.kind==='flake'){ a.size = rand(2, 4.5); a.vy = rand(18, 42); }
+  if (def.kind==='leaf' || def.kind==='petal'){ a.size = rand(6, 10); a.vy = rand(22, 48); }
+  if (def.kind==='confetti'){ a.vy = rand(42, 85); a.vr = rand(-7, 7); }
+  if (def.kind==='glyph'){ a.size = rand(10, 16); }
+  return a;
+}
+
+export function updateAmbient(dt, hol){
+  const def = hol && hol.ambient;
+  if (!def){ ambient.length = 0; ambientId = null; return; }
+  if (ambientId !== hol.id){ ambient.length = 0; ambientId = hol.id; }
+  while (ambient.length < 34) ambient.push(ambientDrop(def, true));
+  for (const a of ambient){
+    a.y += a.vy*dt;
+    a.x += a.vx*dt + Math.sin(a.phase + a.y*0.045)*a.sway*dt;
+    a.rot += a.vr*dt;
+    if (a.y > VH+16){ a.y = rand(-40, -12); a.x = rand(-10, VW+10); }
+    if (a.x < -16) a.x = VW+12; else if (a.x > VW+16) a.x = -12;
+  }
+}
+
+export function drawAmbient(c){
+  for (const a of ambient){
+    c.save();
+    c.globalAlpha = a.alpha;
+    c.translate(a.x, a.y);
+    c.fillStyle = a.color;
+    if (a.glyph){
+      c.rotate(Math.sin(a.phase + a.rot)*0.5);
+      c.font = '700 '+Math.round(a.size)+'px Verdana, sans-serif';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(a.glyph, 0, 0);
+    } else if (a.kind==='confetti'){
+      c.rotate(a.rot);
+      c.fillRect(-a.size/2, -a.size/4, a.size, a.size/2);
+    } else if (a.kind==='leaf' || a.kind==='petal'){
+      c.rotate(a.rot);
+      const ry = a.kind==='leaf' ? a.size*0.55 : a.size*0.42;
+      c.beginPath(); c.ellipse(0, 0, a.size, ry, 0, 0, TAU); c.fill();
+    } else { // flake
+      c.beginPath(); c.arc(0, 0, a.size, 0, TAU); c.fill();
+    }
     c.restore();
   }
 }

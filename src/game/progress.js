@@ -110,8 +110,11 @@ export function patienceCalm(){
 export function brewSpeed(kind){
   return owns(kind==='coffee' ? 'brewfast' : 'steamfast') ? 0.7 : 1;
 }
-/* items visible in the shop right now */
+/* items visible in the shop right now — holiday specials first, so they
+   are never pushed off the fixed card grid by base items */
 export function shopStock(day){
   const h = activeHoliday(day);
-  return SHOP_ITEMS.filter(it => !P.owned[it.id] && (!it.holiday || (h && h.id===it.holiday)));
+  return SHOP_ITEMS
+    .filter(it => !P.owned[it.id] && (!it.holiday || (h && h.id===it.holiday)))
+    .sort((a,b) => (b.holiday?1:0) - (a.holiday?1:0));
 }

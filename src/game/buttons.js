@@ -3,6 +3,7 @@
    the per-frame refresh of enabled/label/selected/visible flags.
    ============================================================ */
 import { VW } from '../core/constants.js';
+import { isMuted } from '../core/audio.js';
 import { Btn } from '../ui/button.js';
 import { PANEL_X, TABS_Y, STATIONS, STATION_LABEL } from './layout.js';
 import { G, frontCustomer } from './state.js';
@@ -31,6 +32,9 @@ BT.machDump  = new Btn(418, 452, 120, 48, 'Dump', {color:'#8a6a5a'});
 BT.topClear      = new Btn(548, 496, 130, 36, 'Remove All', {color:'#8a6a5a', small:true});
 BT.cannoliScrape = new Btn(548, 496, 130, 36, 'Scrape Clean', {color:'#8a6a5a', small:true});
 
+// sound toggle — lives in the bottom-right corner on every screen
+BT.mute = new Btn(VW-54, TABS_Y+3, 42, 38, isMuted()?'🔇':'🔊', {color:'#5a4632', small:true});
+
 // shop buy buttons — fixed slots, laid over the shop cards each frame
 export const SHOP_COLS = 3, SHOP_CARD_W = 288, SHOP_CARD_H = 84;
 export const shopCardPos = i => ({
@@ -43,7 +47,7 @@ BT.shopBuy = Array.from({length:12}, (_,i)=>{
 });
 
 export function activeButtons(){
-  const list=[];
+  const list=[BT.mute];
   if (G.state==='title'){ list.push(BT.newGame); if (G.hasSave) list.push(BT.contGame); }
   else if (G.state==='dayIntro') list.push(BT.start);
   else if (G.state==='summary') list.push(BT.next);

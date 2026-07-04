@@ -51,6 +51,7 @@ export function draw(){
     for (const b of BT.tabs) b.draw(ctx);
     if (G.result) drawResult(ctx);
   }
+  BT.mute.draw(ctx);
   drawParticles(ctx);
   drawFloats(ctx);
   ctx.restore();

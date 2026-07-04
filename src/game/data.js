@@ -10,43 +10,60 @@ import { choice, randi } from '../core/constants.js';
 export const COFFEES = [
   {id:'house',   name:'House Roast',   color:'#3a2317', rank:0},
   {id:'arabica', name:'Arabica',       color:'#4a2c1a', rank:1},
+  {id:'vanillab',name:'Vanilla Bean',  color:'#8a5a30', rank:2},
   {id:'decaf',   name:'Golden Decaf',  color:'#5a3a26', rank:3},
+  {id:'mocha',   name:'Double Mocha',  color:'#53301e', rank:4},
   {id:'dark',    name:'Midnight Roast',color:'#2e1a10', rank:5},
   {id:'hazel',   name:'Hazelnut Roast',color:'#6a4226', rank:7},
+  {id:'toffee',  name:'Toffee Roast',  color:'#7a5228', rank:8},
+  {id:'galaxy',  name:'Galaxy Roast',  color:'#3a2440', rank:9},
   {id:'pumpkin', name:'Pumpkin Brew',  color:'#7a4218', holiday:'halloween'},
   {id:'ginger',  name:'Gingerbread Roast', color:'#6a3a1c', holiday:'christmas'},
+  {id:'party',   name:'Party Roast',   color:'#7a4a5a', holiday:'bday'},
 ];
 /* ---- milks ---- */
 export const MILKS = [
-  {id:'whole',   name:'Whole Milk',   color:'#f4ecdb', rank:0},
-  {id:'oat',     name:'Oat Milk',     color:'#ecdcb9', rank:2},
-  {id:'almond',  name:'Almond Milk',  color:'#e8ddcc', rank:4},
-  {id:'coconut', name:'Coconut Milk', color:'#f7f3ea', rank:6},
-  {id:'eggnog',  name:'Eggnog',       color:'#f2e3b0', holiday:'christmas'},
+  {id:'whole',   name:'Whole Milk',      color:'#f4ecdb', rank:0},
+  {id:'oat',     name:'Oat Milk',        color:'#ecdcb9', rank:2},
+  {id:'straw',   name:'Strawberry Milk', color:'#f4c9d4', rank:3},
+  {id:'almond',  name:'Almond Milk',     color:'#e8ddcc', rank:4},
+  {id:'coconut', name:'Coconut Milk',    color:'#f7f3ea', rank:6},
+  {id:'banana',  name:'Banana Milk',     color:'#f6e9a6', rank:7},
+  {id:'eggnog',  name:'Eggnog',          color:'#f2e3b0', holiday:'christmas'},
 ];
 /* ---- cannoli creams ---- */
 export const CREAMS = [
-  {id:'vanilla', name:'Vanilla Cream',   color:'#f6eeda', rank:0},
-  {id:'caramel', name:'Caramel Cream',   color:'#d89a4a', rank:3},
-  {id:'oreo',    name:'Oreo Cream',      color:'#c2bcb2', speckle:'#2a2a2e', rank:4},
-  {id:'choc',    name:'Chocolate Cream', color:'#6a4428', rank:6},
-  {id:'pump',    name:'Pumpkin Cream',   color:'#e08a3a', holiday:'halloween'},
-  {id:'mint',    name:'Mint Cream',      color:'#bfe8c8', holiday:'christmas'},
+  {id:'vanilla', name:'Vanilla Cream',    color:'#f6eeda', rank:0},
+  {id:'strawc',  name:'Strawberry Cream', color:'#f2b8c6', rank:2},
+  {id:'caramel', name:'Caramel Cream',    color:'#d89a4a', rank:3},
+  {id:'oreo',    name:'Oreo Cream',       color:'#c2bcb2', speckle:'#2a2a2e', rank:4},
+  {id:'choc',    name:'Chocolate Cream',  color:'#6a4428', rank:6},
+  {id:'pistachio',name:'Pistachio Cream', color:'#b8d49a', rank:7},
+  {id:'bgum',    name:'Bubblegum Cream',  color:'#e8a8d8', rank:9},
+  {id:'pump',    name:'Pumpkin Cream',    color:'#e08a3a', holiday:'halloween'},
+  {id:'mint',    name:'Mint Cream',       color:'#bfe8c8', holiday:'christmas'},
+  {id:'cake',    name:'Cake Batter Cream',color:'#f6e8c8', speckle:'#e05a8a', holiday:'bday'},
 ];
 /* ---- drink toppings ---- */
 export const DRIZZLES = [
   {id:'chocolate',  name:'Chocolate Drizzle',  color:'#4a2c17', rank:0},
   {id:'caramel',    name:'Caramel Drizzle',    color:'#e09a33', rank:1},
+  {id:'white',      name:'White Choc Drizzle', color:'#f0e2c8', rank:4},
+  {id:'honey',      name:'Honey Drizzle',      color:'#f2c73c', rank:6},
   {id:'berry',      name:'Berry Drizzle',      color:'#c8507a', rank:8},
   {id:'spider',     name:'Spiderweb Drizzle',  color:'#2a2a30', holiday:'halloween'},
   {id:'peppermint', name:'Peppermint Drizzle', color:'#e05a6a', holiday:'christmas'},
+  {id:'frosting',   name:'Pink Frosting',      color:'#ff8ab8', holiday:'bday'},
 ];
 export const SPRINKLE_SETS = [
   {id:'rainbow',  name:'Rainbow Sprinkles', colors:['#ff5a5f','#ffb400','#2fd08c','#3aa0ff','#c86bff'], rank:0},
   {id:'cocoa',    name:'Cocoa Sprinkles',   colors:['#6b4326','#8a5a33','#4a2c17'], rank:2},
+  {id:'ocean',    name:'Ocean Sprinkles',   colors:['#3ac8e8','#2a6ae0','#9ae8f0'], rank:4},
   {id:'gold',     name:'Gold Sprinkles',    colors:['#ffd24a','#ffe9a0','#e0a828'], rank:5},
+  {id:'hearts',   name:'Heart Sprinkles',   colors:['#ff6a8a','#ff9ab0','#e04868'], rank:7},
   {id:'spooky',   name:'Spooky Sprinkles',  colors:['#ff8c1a','#3a2a4a','#141418'], holiday:'halloween'},
   {id:'candy',    name:'Candy Cane Sprinkles', colors:['#ff4a4a','#ffffff','#ff9a9a'], holiday:'christmas'},
+  {id:'party',    name:'Party Poppers',     colors:['#ff5a5f','#ffd24a','#3ae0c8','#c86bff','#ffffff'], holiday:'bday'},
 ];
 
 /* ---- barista ranks: cumulative XP needed to reach each ---- */
@@ -71,6 +88,9 @@ export const HOLIDAYS = [
   {id:'christmas', name:'Christmas', startDay:9,
    sky:['#2a4a6a','#1c3048'], accent:'#ff5a5a',
    greet:'Festive specials in the shop — collect them all to finish the holiday!'},
+  {id:'bday', name:'Birthday Bash', startDay:14,
+   sky:['#c84a8a','#5a2a5a'], accent:'#ffd24a',
+   greet:'Party specials in the shop — collect them all to finish the holiday!'},
 ];
 
 /* ---- shop catalog (gadgets, decors, holiday unlocks) ----
@@ -97,6 +117,12 @@ export const SHOP_ITEMS = [
   {id:'xm-drizzle',  name:'Peppermint Sauce',    desc:'Unlocks Peppermint drizzle',     price:40, holiday:'christmas', grants:{drizzle:'peppermint'}},
   {id:'xm-sprinkle', name:'Candy Cane Jar',      desc:'Unlocks Candy Cane sprinkles',   price:40, holiday:'christmas', grants:{sprinkles:'candy'}},
   {id:'xm-tree',     name:'Mini Tree',           desc:'Festive decor, calms the queue', price:35, holiday:'christmas', kind:'decor', calm:0.9},
+  // Birthday Bash
+  {id:'bd-coffee',   name:'Party Roast Beans',   desc:'Unlocks Party Roast coffee',     price:45, holiday:'bday', grants:{coffee:'party'}},
+  {id:'bd-cream',    name:'Cake Batter Tub',     desc:'Unlocks Cake Batter cream',      price:50, holiday:'bday', grants:{cream:'cake'}},
+  {id:'bd-drizzle',  name:'Frosting Bottle',     desc:'Unlocks Pink Frosting drizzle',  price:40, holiday:'bday', grants:{drizzle:'frosting'}},
+  {id:'bd-sprinkle', name:'Party Popper Jar',    desc:'Unlocks Party Popper sprinkles', price:40, holiday:'bday', grants:{sprinkles:'party'}},
+  {id:'bd-balloons', name:'Balloon Bunch',       desc:'Party decor, calms the queue',   price:35, holiday:'bday', kind:'decor', calm:0.9},
 ];
 
 export const NAMES = ['Ava','Milo','June','Theo','Nora','Ezra','Ivy','Otis','Lena','Remy',
@@ -105,6 +131,9 @@ export const NAMES = ['Ava','Milo','June','Theo','Nora','Ezra','Ivy','Otis','Len
 /* ---- brew timing (seconds) — boosters multiply these by 0.7 ---- */
 export const COFFEE_TIME = amt => 11 + amt*2;    // 13/15/17s
 export const MILK_TIME   = amt => 12.5 + amt*2.5; // 15/17.5/20s
+
+/* ---- how many customers a day brings (shared by spawner + day intro) ---- */
+export const customersForDay = day => Math.min(3 + day, 10);
 
 /* ---- order generation, restricted to what the player has unlocked ---- */
 export function makeOrder(day, unlocked){

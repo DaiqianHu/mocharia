@@ -3,7 +3,7 @@
    selection, machine selection, and grabbing topping/cream
    containers. Wires the DOM pointer events at module load.
    ============================================================ */
-import { audioCtx, blip, ding, chaChing } from './core/audio.js';
+import { audioCtx, blip, chaChing, fanfare, startMusic, toggleMuted } from './core/audio.js';
 import { canvas, toVirtual } from './core/canvas.js';
 import { spawnParticle, popText, confettiBurst } from './core/particles.js';
 import { STATIONS, RAIL_H } from './game/layout.js';
@@ -36,7 +36,7 @@ function buyItem(it){
     if (checkHolidayComplete(hol)){
       G.holidayJustDone = hol.name;
       confettiBurst(VW/2, 240, 120);
-      ding();
+      fanfare();
     }
   }
   saveProgress();
@@ -44,12 +44,14 @@ function buyItem(it){
 
 function pointerDown(x,y){
   audioCtx(); // unlock audio on first gesture
+  startMusic();
   G.pointer.x=x; G.pointer.y=y; G.pointer.down=true;
 
   const btns = activeButtons();
   for (const b of btns){
     if (b.enabled && b.contains(x,y)){
       b.press();
+      if (b===BT.mute){ b.label = toggleMuted() ? '🔇' : '🔊'; return; }
       if (b===BT.newGame){
         resetProgress();
         G.day=1; G.money=0; G.introT=0; G.hasSave=true; G.state='dayIntro'; return;

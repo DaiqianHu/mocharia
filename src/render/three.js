@@ -64,6 +64,10 @@ export function setHolidayLighting(h){
     hemi.color.set(0xdbe8ff); hemi.groundColor.set(0x1c3048); hemi.intensity=0.95;
     keyLight.color.set(0xfff2e0); keyLight.intensity=1.1;
     fillLight.color.set(0x9ad0ff);
+  } else if (h && h.id==='bday'){
+    hemi.color.set(0xffe0f0); hemi.groundColor.set(0x5a2a4a); hemi.intensity=0.95;
+    keyLight.color.set(0xfff0d8); keyLight.intensity=1.15;
+    fillLight.color.set(0xff9ad0);
   } else {
     hemi.color.set(0xffffff); hemi.groundColor.set(0x4a3a2a); hemi.intensity=0.95;
     keyLight.color.set(0xffffff); keyLight.intensity=1.15;

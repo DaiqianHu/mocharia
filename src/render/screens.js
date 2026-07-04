@@ -4,7 +4,7 @@
    and the per-serve result card.
    ============================================================ */
 import { VW, VH, TAU, clamp, lerp, easeOut, fmt$, rr } from '../core/constants.js';
-import { RANKS } from '../game/data.js';
+import { RANKS, customersForDay } from '../game/data.js';
 import { gradeWord, gradeColor } from '../game/scoring.js';
 import { G, currentHoliday } from '../game/state.js';
 import { P, nextRankXp, shopStock, holidayItems, unlocksAtRank } from '../game/progress.js';
@@ -36,10 +36,11 @@ export function drawScoreIcon(c,x,y,kind){
   c.restore();
 }
 
-export function drawStars(c,x,y,n,size=15,total=5){
+export function drawStars(c,x,y,n,size=15,total=5,scaleOf=null){
   for(let i=0;i<total;i++){
     const sx=x+i*(size*2.1);
     c.save(); c.translate(sx,y);
+    if (scaleOf){ const s=scaleOf(i); c.scale(s,s); }
     c.beginPath();
     for(let k=0;k<5;k++){
       const a=-Math.PI/2 + k*TAU/5;
@@ -129,7 +130,7 @@ export function drawDayIntro(c){
   c.fillStyle='#3a2216'; c.font='900 54px "Trebuchet MS", Verdana, sans-serif';
   c.fillText('Day '+G.day, VW/2, 60);
   c.font='700 17px Verdana, sans-serif'; c.fillStyle='#6a4a2c';
-  c.fillText(Math.min(3+G.day,9)+' customers on the way', VW/2, 116);
+  c.fillText(customersForDay(G.day)+' customers on the way', VW/2, 116);
   c.fillText('Wallet: '+fmt$(G.money)+'   ·   Rank: '+RANKS[P.rank].name, VW/2, 148);
   if (hol){
     c.fillStyle=hol.accent; c.font='900 24px "Trebuchet MS", Verdana, sans-serif';
@@ -276,7 +277,12 @@ export function drawResult(c){
   c.textAlign='center'; c.textBaseline='middle';
   c.fillStyle='#3a2216'; c.font='900 28px "Trebuchet MS", Verdana, sans-serif';
   c.fillText(r.custName+' says: '+(r.mood==='happy'?'Delicious!':'Hmm...'), cx, top+38);
-  drawStars(c, cx-64, top+78, r.stars, 13);
+  // stars pop in one by one (starsShown advances in state.js with a chime)
+  drawStars(c, cx-64, top+78, r.starsShown, 13, 5, i=>{
+    if (i>=r.starsShown) return 1;
+    const age = r.t - (0.45 + i*0.18);
+    return 1 + 0.8*Math.max(0, 1 - age/0.16);
+  });
   // breakdown rows
   const rows=[['order','Order',r.os],['brew','Brew',r.bs],['top','Toppings',r.ts]];
   if (r.cs!==null) rows.push(['cannoli','Cannoli',r.cs]);

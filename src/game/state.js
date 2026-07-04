@@ -6,9 +6,9 @@
    ============================================================ */
 import { VW, clamp, rand } from '../core/constants.js';
 import { updateParticles, spawnParticle, confettiBurst, popText } from '../core/particles.js';
-import { blip, ding, chaChing } from '../core/audio.js';
+import { blip, ding, chaChing, starChime, fanfare, pour } from '../core/audio.js';
 import { MACHINES } from './layout.js';
-import { COFFEE_TIME, MILK_TIME } from './data.js';
+import { COFFEE_TIME, MILK_TIME, customersForDay } from './data.js';
 import { Customer } from './customer.js';
 import { brewScore, topScore, cannoliScore, orderScore, xpFor } from './scoring.js';
 import { activeButtons, refreshButtonState } from './buttons.js';
@@ -53,7 +53,7 @@ export function resetMachines(){
 export function startDay(){
   G.customers.length=0; G.tickets.length=0; G.active=null;
   G.served.length=0; G.result=null;
-  G.spawn.total = Math.min(3+G.day, 9);
+  G.spawn.total = customersForDay(G.day);
   G.spawn.left = G.spawn.total;
   G.spawn.timer = 1.2;
   G.station='order'; G.drag=null; G.cream=null;
@@ -98,7 +98,7 @@ export function serveActive(){
   G.dayXp += xp; P.xp += xp;
   G.served.push({ name:t.cust.name, stars, earn, total, os, bs, ts, cs });
   G.result = { ticket:t, os, bs, ts, cs, total, tip, price:o.price, stars, xp,
-               t:0, custName:t.cust.name, mood: total>=58?'happy':'angry' };
+               t:0, starsShown:0, custName:t.cust.name, mood: total>=58?'happy':'angry' };
   t.cust.state='served';
   t.cust.mood = total>=58 ? 'happy':'angry';
   t.cust.patience = 1;                   // stop the stomping on the way out
@@ -124,6 +124,7 @@ function endDay(){
   const before = P.rank;
   const ups = applyRankUps();
   G.rankRes = ups>0 ? { ups, from:RANKS[before].name, to:RANKS[P.rank].name, rank:P.rank } : null;
+  if (G.rankRes){ fanfare(); confettiBurst(VW/2, 190, 110); }
   const dayEarn = G.served.reduce((a,s)=>a+s.earn,0);
   if (dayEarn>G.best) G.best=dayEarn;
   P.day = G.day; P.money = G.money; P.best = G.best;
@@ -157,7 +158,13 @@ export function update(dt){
   // machines keep brewing even inside the result overlay
   updateMachines(dt);
 
-  if (G.result){ G.result.t += dt; refreshButtonState(); return; }
+  if (G.result){
+    const r = G.result; r.t += dt;
+    // stars pop in one at a time with a chime (drawResult reads starsShown)
+    const shown = clamp(Math.floor((r.t - 0.45)/0.18)+1, 0, r.stars);
+    if (shown > r.starsShown){ r.starsShown = shown; starChime(shown); }
+    refreshButtonState(); return;
+  }
 
   // spawning
   if (G.spawn.left>0){
@@ -247,6 +254,7 @@ export function pourMachine(m){
   t.cup[slot] = { type:m.type, temp:m.temp, amt:m.amt };
   m.state='idle'; m.t=0;
   popText(m.x+m.w/2, 150, 'Poured!', '#8fe0a8', 16);
+  pour(0.5);
   blip(640,0.1,'sine',0.12,180);
 }
 

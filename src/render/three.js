@@ -236,9 +236,10 @@ export function shadowDecal(rx, rz){
    use material.visible=false so they never render but still raycast.
    ============================================================ */
 export const colliders = {
-  machines: [],     // {mesh, index}
-  cupZone: null,    // plane mesh; worldToLocal(hit).x -> relX
-  customers: [],    // {mesh, id}
+  machines: [],       // {mesh, index}
+  cupZone: null,      // plane mesh; worldToLocal(hit).x -> relX
+  customers: [],      // {mesh, id}
+  cannoliEnds: null,  // {L: mesh, R: mesh}
 };
 const raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
@@ -268,6 +269,13 @@ export function hitTestScene(px, py, station){
       if (hit){
         const local = colliders.cupZone.worldToLocal(hit.point.clone());
         return { kind:'cup', relX: Math.max(-0.48, Math.min(0.48, local.x / colliders.cupZone.userData.w)) };
+      }
+    }
+  } else if (station==='cannoli'){
+    if (colliders.cannoliEnds){
+      for (const end of ['L','R']){
+        if (raycaster.intersectObject(colliders.cannoliEnds[end], false)[0])
+          return { kind:'cannoliEnd', end };
       }
     }
   }

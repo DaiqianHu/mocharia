@@ -72,7 +72,7 @@ export function drawOrderStation(c){
    reconciled against G.customers each frame — they sit at the same z
    as the old rigs so the counter still occludes their lower bodies.
    ============================================================ */
-import { THREE, place, mat, woodTexture, camera, stationRig, projectVirtual } from '../render/three.js';
+import { THREE, place, mat, woodTexture, camera, stationRig, projectVirtual, colliders } from '../render/three.js';
 import { RIGS, lobbyPos, SPRITE_SCALE } from '../render/layout3d.js';
 import { makeCustomerRig, updateCustomerRig } from '../render/character.js';
 import { owns } from '../game/progress.js';
@@ -291,6 +291,8 @@ export function updateOrder3D(){
       rig = makeCustomerRig(cust);
       order3d.group.add(rig.group);
       order3d.rigs.set(cust.id, rig);
+      // the sprite plane doubles as the tap collider (group carries custId)
+      colliders.customers.push({ mesh: rig.mesh, id: cust.id });
     }
     // map the customer's virtual walk coords onto the lobby floor and
     // billboard the sprite toward the camera. Feet sit ~70 below the
@@ -310,6 +312,8 @@ export function updateOrder3D(){
       rig.mesh.geometry.dispose();
       rig.mesh.material.dispose();
       order3d.rigs.delete(id);
+      const ci = colliders.customers.findIndex(c=>c.id===id);
+      if (ci>=0) colliders.customers.splice(ci,1);
     }
   }
 }

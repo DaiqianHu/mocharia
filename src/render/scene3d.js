@@ -7,20 +7,40 @@
    over render/three.js; imports the station builders (circular-safe:
    every cross-reference runs inside a function at runtime).
    ============================================================ */
-import { scene, camera, renderer,
+import { scene, camera, renderer, projectVirtual,
          orderGroup, brewGroup, topGroup, cannoliGroup,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';
 import { snapView, updateCamera } from './camera.js';
+import { RIGS, VIEWS, lobbyPos } from './layout3d.js';
+import { MACHINES, TOP_CUP, CANNOLI } from '../game/layout.js';
 import { G, currentHoliday } from '../game/state.js';
 import { buildOrder3D, updateOrder3D } from '../stations/order.js';
 import { buildBrew3D, updateBrew3D } from '../stations/brew.js';
 import { buildTop3D, updateTop3D } from '../stations/top.js';
-import { buildCannoli3D, updateCannoli3D } from '../stations/cannoli.js';
+import { buildCannoli3D, updateCannoli3D, cannoliScreen } from '../stations/cannoli.js';
 
 let inited = false;
 let lastHoliday = '__none__';
 let lastNow = null;
+
+/* Debug/test surface (like window.G/P/R): project station anchors to
+   virtual-pixel screen coords through the live camera so headless tests
+   can click real scene positions without duplicating layout math. */
+function rigPoint(rig, vx, vy, vz){
+  const {anchor, at, s} = rig;
+  return projectVirtual(
+    at.x + s*(vx - anchor.ax),
+    at.y + s*(anchor.ay - vy),
+    at.z + s*(vz - anchor.az));
+}
+if (typeof window!=='undefined') window.V3 = {
+  machineScreen: i => { const m=MACHINES[i]; return rigPoint(RIGS.brew, m.x+m.w/2, m.y+105, 14); },
+  cupScreen:     (dy=125) => rigPoint(RIGS.top, TOP_CUP.cx, TOP_CUP.by-dy, 20),
+  cannoliEnd:    end => cannoliScreen((end==='L'?-1:1)*CANNOLI.len/2, 0),
+  custScreen:    cust => { const p=lobbyPos(cust.x,cust.y); return projectVirtual(p.x, 110, p.z); },
+  RIGS, VIEWS,
+};
 
 export function initScene3d(){
   if (inited) return;

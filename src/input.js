@@ -12,7 +12,7 @@ import { BT, SIZE_IDS, activeButtons } from './game/buttons.js';
 import { P, saveProgress, resetProgress, shopStock, checkHolidayComplete } from './game/progress.js';
 import { HOLIDAYS } from './game/data.js';
 import { takeOrder } from './stations/order.js';
-import { machineRect } from './stations/brew.js';
+import { hitTestScene } from './render/three.js';
 import { shelfHit, clearToppings, chooseSize, sizeCardHit } from './stations/top.js';
 import { cannoliShelfHit, scrapeCannoli, chooseShell } from './stations/cannoli.js';
 import { VW } from './core/constants.js';
@@ -123,18 +123,17 @@ function pointerDown(x,y){
     }
     return;
   }
-  // order station: tap the front customer directly
+  // order station: tap the front customer directly (raycast their sprite)
   if (G.station==='order'){
     const f=frontCustomer();
-    if (f && Math.hypot(x-f.x, y-(f.y-10))<58){ takeOrder(); return; }
+    const hit = hitTestScene(x, y, 'order');
+    if (f && hit && hit.id===f.id){ takeOrder(); return; }
   }
-  // brew station: tap a machine to select it
+  // brew station: tap a machine to select it (raycast its collider box)
   if (G.station==='brew'){
-    for (let i=0;i<G.machines.length;i++){
-      const r=machineRect(G.machines[i]);
-      if (x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h){
-        G.selMachine=i; blip(660,0.05,'sine',0.09); return;
-      }
+    const hit = hitTestScene(x, y, 'brew');
+    if (hit && hit.kind==='machine'){
+      G.selMachine=hit.index; blip(660,0.05,'sine',0.09); return;
     }
   }
   // topping station: grab a container off the shelf (once a cup is picked)

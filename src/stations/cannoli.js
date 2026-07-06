@@ -36,17 +36,32 @@ export function chooseShell(item){
   const cn=t.cannoli;
   if (cn.shell && cn.shell.id===item.id) return;
   t.cannoli = { shell:item, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
-  popText(CANNOLI.cx, CANNOLI.cy-90, item.name+'!', '#ffe9a8', 16);
+  const s = cannoliScreen(0, -CANNOLI.r-90);
+  popText(s.x, s.y, item.name+'!', '#ffe9a8', 16);
   blip(560,0.07,'triangle',0.1,120);
 }
 
-/* which end of the shell is the pointer over? */
+/* which end of the shell is the pointer over? (raycast the invisible
+   end-collider boxes registered by buildCannoli3D) */
 function endAt(px,py){
-  const {cx,cy,len,r}=CANNOLI;
-  if (Math.abs(py-cy)>r+56) return null;
-  if (px>cx-len/2-46 && px<cx-len/2+66) return 'L';
-  if (px>cx+len/2-66 && px<cx+len/2+46) return 'R';
-  return null;
+  const hit = hitTestScene(px, py, 'cannoli');
+  return hit ? hit.end : null;
+}
+
+/* the shell group is yawed so BOTH mouths face the camera a little */
+export const SHELL_YAW = 0.30;
+
+/* project a shell-local point (old virtual-px offsets from the shell
+   centre, dx along the tube axis) to virtual screen coords, for glow
+   rects, popTexts and the V3 test surface — accounts for SHELL_YAW */
+export function cannoliScreen(dx, dy, dz=0){
+  const {anchor, at, s} = RIGS.cannoli;
+  const rx = dx*Math.cos(SHELL_YAW) + dz*Math.sin(SHELL_YAW);
+  const rz = -dx*Math.sin(SHELL_YAW) + dz*Math.cos(SHELL_YAW);
+  return projectVirtual(
+    at.x + s*((CANNOLI.cx + rx) - anchor.ax),
+    at.y + s*(anchor.ay - (CANNOLI.cy + dy)),
+    at.z + s*(12 + rz - anchor.az));
 }
 
 let emitAcc=0;
@@ -101,7 +116,8 @@ export function scrapeCannoli(){
   const t=G.active; if(!t || !t.cannoli) return;
   // keep the chosen shell, scrape off cream + sprinkles
   t.cannoli = { shell:t.cannoli.shell, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
-  popText(CANNOLI.cx, CANNOLI.cy-90, 'Scraped clean', '#ffe9a8', 16);
+  const s = cannoliScreen(0, -CANNOLI.r-90);
+  popText(s.x, s.y, 'Scraped clean', '#ffe9a8', 16);
   blip(320,0.09,'triangle',0.1);
 }
 
@@ -136,11 +152,13 @@ export function drawCannoliStation(c){
   }
   if (G.drag && cn){
     drawShelfItem(c, G.drag, G.pointer.x, G.pointer.y-14, true);
-    // glow the ends
+    // glow the ends (rects centered on the projected shell-end positions)
     const glow=0.4+Math.sin(G.time*7)*0.25;
     c.strokeStyle='rgba(255,235,150,'+glow.toFixed(2)+')'; c.lineWidth=2.6; c.setLineDash([7,6]);
-    rr(c,cx-len/2-42,cy-r-18,104,r*2+36,14); c.stroke();
-    rr(c,cx+len/2-62,cy-r-18,104,r*2+36,14); c.stroke();
+    for (const dir of [-1,1]){
+      const e = cannoliScreen(dir*len/2, 0);
+      rr(c, e.x-52, e.y-62, 104, 124, 14); c.stroke();
+    }
     c.setLineDash([]);
   }
   BT.cannoliScrape.draw(c);
@@ -260,7 +278,8 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
    shallow board sits under it. Empty ends show a dark cap. End
    hit-testing still uses the virtual-coord endAt() (shell sits at z≈0).
    ============================================================ */
-import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture, TOON_RAMP, stationRig } from '../render/three.js';
+import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture, TOON_RAMP, stationRig,
+         projectVirtual, hitTestScene, colliders, colliderMaterial } from '../render/three.js';
 import { RIGS } from '../render/layout3d.js';
 
 let can3d = null;
@@ -273,6 +292,7 @@ export function buildCannoli3D(group){
   const {cx,cy,len,r} = CANNOLI;
   const g = new THREE.Group();
   place(g, cx, cy, 12);
+  g.rotation.y = SHELL_YAW;   // open both mouths toward the camera
   rig.add(g);
 
   const sh = shadowDecal(len*0.62, 34); sh.position.set(0,-r-6,0); g.add(sh);
@@ -318,6 +338,17 @@ export function buildCannoli3D(group){
     const dip = new THREE.Mesh(dipGeo, mat('#5a3420',{rough:0.3, noCache:true}));
     dip.position.x = dir*(len/2 - len*0.1); dip.visible = false; g.add(dip);
     dips.push(dip);
+  }
+
+  // invisible end colliders for the pipe/sprinkle raycast (generous boxes
+  // around each mouth, matching the old ±46/66 virtual-px tap zones)
+  colliders.cannoliEnds = {};
+  for (const key of ['L','R']){
+    const dir = key==='L' ? -1 : 1;
+    const col = new THREE.Mesh(new THREE.BoxGeometry(112, r*2+112, r*2+40), colliderMaterial());
+    col.position.set(dir*(len/2+10), 0, 10);
+    g.add(col);
+    colliders.cannoliEnds[key] = col;
   }
 
   // dark end caps (shown when an end has no cream)

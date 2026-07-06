@@ -41,37 +41,43 @@ export function drawBrewStation(c){
 }
 
 /* Crisp 2D captions layered over each 3D machine: name plate, type/temp
-   readout and the brew timer / READY / idle status. */
+   readout and the brew timer / READY / idle status. Anchored by
+   projecting the machine's world position through the live camera. */
 function drawMachineHUD(c, m, selected){
-  const cx = m.x+m.w/2;
+  const idx = G.machines.indexOf(m);
+  const r3 = brew3d && brew3d.machines[idx];
+  if (!r3) return;
+  const { wp } = r3;
+  // caption anchors in world space: name plate over the machine body,
+  // status under the measuring cup (cup base is wp.y, body top +206 local)
+  const name = projectVirtual(wp.x, wp.y + wp.s*230, wp.z);
+  const stat = projectVirtual(wp.x, wp.y - wp.s*26, wp.z);
   const running = m.state==='run', done = m.state==='done';
-  // name plate on the machine face
   c.textAlign='center'; c.textBaseline='middle';
   c.fillStyle = selected ? '#ffe9b8' : 'rgba(255,255,255,0.92)';
   c.font='800 12px Verdana, sans-serif';
-  c.fillText((m.kind==='coffee'?'☕ COFFEE ':'🥛 MILK ')+(G.machines.indexOf(m)+1), cx, m.y+20);
+  c.fillText((m.kind==='coffee'?'☕ COFFEE ':'🥛 MILK ')+(idx+1), name.x, name.y);
   // type + temp (+ add-in) readout
   c.fillStyle = selected ? '#fff4d6' : 'rgba(255,244,222,0.82)';
   c.font='700 10px Verdana, sans-serif';
-  c.fillText(m.type.name+'  ·  '+tempLabel(m), cx, m.y+36);
+  c.fillText(m.type.name+'  ·  '+tempLabel(m), name.x, name.y+15);
   if (m.addin){
     c.fillStyle = shade(m.addin.color, 70);
     c.font='700 9px Verdana, sans-serif';
-    c.fillText('+ '+m.addin.name, cx, m.y+50);
+    c.fillText('+ '+m.addin.name, name.x, name.y+29);
   }
   // status under the measuring cup
-  const sy = m.y+CUP_BOT+24;
   if (running){
     c.fillStyle='#ffd24a'; c.font='800 15px Verdana, sans-serif';
-    c.fillText((m.total-m.t).toFixed(1)+'s', cx, sy);
+    c.fillText((m.total-m.t).toFixed(1)+'s', stat.x, stat.y);
   } else if (done){
     const b=1+Math.sin(G.time*7)*0.08;
-    c.save(); c.translate(cx,sy); c.scale(b,b);
+    c.save(); c.translate(stat.x,stat.y); c.scale(b,b);
     c.fillStyle='#3fd08c'; c.font='800 14px Verdana, sans-serif';
     c.fillText('READY!', 0, 0); c.restore();
   } else {
     c.fillStyle='rgba(255,233,184,0.6)'; c.font='700 11px Verdana, sans-serif';
-    c.fillText('idle', cx, sy);
+    c.fillText('idle', stat.x, stat.y);
   }
 }
 
@@ -89,8 +95,8 @@ export function isCold(m){ return m.temp!=='hot'; }
    selection still uses the 2D machineRect hit-test (valid at z≈0).
    ============================================================ */
 import { THREE, place, mat, fillMesh, fluidGeometry, shadowDecal,
-         colliders, colliderMaterial, TOON_RAMP } from '../render/three.js';
-import { stationRoom3D } from '../render/scene3d.js';
+         colliders, colliderMaterial, TOON_RAMP, stationRig, projectVirtual } from '../render/three.js';
+import { RIGS } from '../render/layout3d.js';
 
 const CUP_H = CUP_BOT - CUP_TOP;              // measuring-cup height (98)
 const CUP_BOTR = CW*0.4, CUP_TOPR = CW/2;     // cup radii
@@ -98,14 +104,17 @@ const MZ = 14;                                // machines sit slightly forward
 let brew3d = null;
 
 export function buildBrew3D(group){
-  group.add(stationRoom3D());
+  // all machine geometry stays in old virtual-pixel local space; the rig
+  // scales it down and stands it on the café's back counter (layout3d.js)
+  const rig = stationRig(RIGS.brew.anchor, RIGS.brew.at, RIGS.brew.s);
+  group.add(rig);
   const machines = [];
   for (let i=0;i<G.machines.length;i++){
     const src = G.machines[i];
     const cx = src.x+src.w/2, cupBotV = src.y+CUP_BOT;
     const g = new THREE.Group();
     place(g, cx, cupBotV, MZ);          // local y=0 sits at the cup base
-    group.add(g);
+    rig.add(g);
 
     // contact shadow
     const sh = shadowDecal(src.w*0.5, 26); sh.position.set(0,1,0); g.add(sh);
@@ -202,10 +211,19 @@ export function buildBrew3D(group){
     // invisible collider box over the whole machineRect (for raycast API)
     const col = new THREE.Mesh(new THREE.BoxGeometry(src.w, 210, 80), colliderMaterial());
     place(col, cx, src.y+105, MZ);
-    group.add(col);
+    rig.add(col);
     colliders.machines.push({ mesh:col, index:i });
 
-    machines.push({ g, body, panel, lamp, lampMat, spout, glass, fluid, fluidMat, rings, pour, ice, selRing, turbo, bell, kind:src.kind });
+    // world-space anchor of the cup base, for projecting the 2D captions
+    const s = RIGS.brew.s;
+    const wp = {
+      x: rig.position.x + s*(cx - 480),
+      y: rig.position.y + s*(300 - cupBotV),
+      z: rig.position.z + s*MZ,
+      s,
+    };
+
+    machines.push({ g, body, panel, lamp, lampMat, spout, glass, fluid, fluidMat, rings, pour, ice, selRing, turbo, bell, kind:src.kind, wp });
   }
   brew3d = { machines };
 }

@@ -4,10 +4,15 @@
    helpers (coordinate mapping, scale-from-anchor fill meshes, instanced
    scatter, blurred shadow decals, raycast hit-testing).
 
-   Coordinate contract: the camera is placed so that world units at z=0
-   equal virtual pixels. A virtual point (px,py) maps to world
-   (px-VW/2, VH/2-py, z) via toWorld()/place() — so every hand-tuned
-   anchor in game/layout.js is reused directly as a z=0 placement.
+   Coordinate contract (the real-3D café): world y is up, the café
+   floor is y=0, and the camera (driven by render/camera.js) flies
+   between per-station viewpoints defined in render/layout3d.js.
+
+   Station geometry is still authored in the old virtual-pixel local
+   space — place()/toWorld() map virtual (px,py) to (px-VW/2, VH/2-py, z)
+   INSIDE a station rig, and stationRig() positions/scales that local
+   space into the café so an old-virtual anchor lands on a chosen world
+   point. That keeps every hand-tuned anchor in game/layout.js valid.
 
    The renderer's canvas (#game3d) is CSS-sized to cover exactly the
    letterbox rect, so no viewport/scissor offset math is needed and the
@@ -18,7 +23,7 @@
    ============================================================ */
 import * as THREE from 'three';
 import { VW, VH } from '../core/constants.js';
-import { onResize, virtualToNDC, VIEW } from '../core/canvas.js';
+import { onResize, virtualToNDC, worldToVirtual, VIEW } from '../core/canvas.js';
 
 export { THREE };
 
@@ -32,13 +37,13 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 export const scene = new THREE.Scene();
 
-// narrow FOV so the "world units at z=0 == virtual px" trick keeps
-// perspective distortion small. distance = (VH/2)/tan(fovY/2).
-const FOV = 28;
-export const CAM_DIST = (VH/2) / Math.tan((FOV*Math.PI/180)/2);
-export const camera = new THREE.PerspectiveCamera(FOV, VW/VH, 10, CAM_DIST*3);
-camera.position.set(0, 0, CAM_DIST);
-camera.lookAt(0, 0, 0);
+// A perspective camera with a fixed VW/VH aspect (the canvas always
+// represents the letterboxed virtual rect). Its pose — position, target
+// and fov per station, plus the fly-between tween — is driven every
+// frame by render/camera.js.
+export const camera = new THREE.PerspectiveCamera(45, VW/VH, 10, 3200);
+camera.position.set(0, 300, 500);
+camera.lookAt(0, 100, -100);
 
 /* ---- the four station groups (toggled by .visible) ---- */
 export const orderGroup   = new THREE.Group();
@@ -73,6 +78,27 @@ export function setHolidayLighting(h){
    ============================================================ */
 export function toWorld(px, py, z=0){ return new THREE.Vector3(px - VW/2, VH/2 - py, z); }
 export function place(obj, px, py, z=0){ obj.position.set(px - VW/2, VH/2 - py, z); return obj; }
+
+/* Project a world point to virtual-pixel coords through the live camera
+   (for anchoring 2D HUD bits — patience meters, speech bubbles, popText —
+   onto 3D objects). Returns {x,y} in virtual pixels. */
+const _pv = new THREE.Vector3();
+export function projectVirtual(x, y, z){
+  _pv.set(x, y, z);
+  return worldToVirtual(_pv, camera);
+}
+
+/* A station rig: a Group whose LOCAL space is the old virtual-pixel
+   mapping (so station geometry keeps using place() verbatim), scaled
+   by s and positioned so the old-virtual anchor (ax,ay,az) lands
+   exactly on the world point `at`. */
+export function stationRig({ax, ay, az=0}, at, s=1){
+  const rig = new THREE.Group();
+  rig.scale.setScalar(s);
+  const a = toWorld(ax, ay, az);
+  rig.position.set(at.x - s*a.x, at.y - s*a.y, at.z - s*a.z);
+  return rig;
+}
 
 /* ============================================================
    Sizing — keep #game3d exactly over the letterbox rect. The camera
@@ -287,4 +313,4 @@ export function mat(color, opts={}){
 }
 
 let R = renderer;
-if (typeof window!=='undefined') window.R = renderer;
+if (typeof window!=='undefined'){ window.R = renderer; window.S3 = { scene, camera }; }

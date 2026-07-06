@@ -34,10 +34,13 @@ export function drawOrderStation(c){
   c.fillStyle='#ffe9b8'; c.font='800 14px Verdana, sans-serif';
   c.textAlign='center'; c.textBaseline='middle';
   c.fillText('PICK-UP  AREA', 795, 222);
-  // patience meters float above each queued customer
+  // patience meters float above each queued customer (projected from
+  // their 3D lobby position through the live camera)
   for (const cust of G.customers){
     if (cust.state==='queue' || cust.state==='waiting'){
-      const pw=54, px=cust.x-pw/2, py=cust.y-84;
+      const wp = lobbyPos(cust.x, cust.y);
+      const s = projectVirtual(wp.x, 200, wp.z);
+      const pw=54, px=s.x-pw/2, py=s.y;
       c.fillStyle='rgba(30,14,8,0.55)'; rr(c,px-2,py-2,pw+4,12,6); c.fill();
       const col = cust.patience>0.6 ? '#3fd08c' : cust.patience>0.3 ? '#ffb400' : '#ff5a4f';
       c.fillStyle=col; rr(c,px,py,Math.max(3,pw*cust.patience),8,4); c.fill();
@@ -46,7 +49,9 @@ export function drawOrderStation(c){
   // front-customer speech bubble
   const f=frontCustomer();
   if (f && Math.hypot(f.tx-f.x,f.ty-f.y)<6){
-    const bx=f.x, byy=f.y-146;
+    const fwp = lobbyPos(f.x, f.y);
+    const fs = projectVirtual(fwp.x, 215, fwp.z);
+    const bx=fs.x, byy=fs.y-40;
     c.fillStyle='#fff8e6'; rr(c,bx-92,byy-26,184,56,12); c.fill();
     c.beginPath(); c.moveTo(bx-10,byy+30); c.lineTo(bx+10,byy+30); c.lineTo(bx,byy+46); c.closePath(); c.fill();
     c.fillStyle='#3a2216'; c.font='800 13px Verdana, sans-serif';
@@ -67,7 +72,8 @@ export function drawOrderStation(c){
    reconciled against G.customers each frame — they sit at the same z
    as the old rigs so the counter still occludes their lower bodies.
    ============================================================ */
-import { THREE, place, mat, woodTexture, plasterTexture } from '../render/three.js';
+import { THREE, place, mat, woodTexture, camera, stationRig, projectVirtual } from '../render/three.js';
+import { RIGS, lobbyPos, SPRITE_SCALE } from '../render/layout3d.js';
 import { makeCustomerRig, updateCustomerRig } from '../render/character.js';
 import { owns } from '../game/progress.js';
 
@@ -223,7 +229,10 @@ function rebuildDecor(){
     if (!owns(id)) continue;
     const d = DECOR_PROPS[id];
     const g = new THREE.Group();
-    place(g, d.x, d.y, d.z);
+    // wall/hanging props keep their back-wall anchors; floor props move
+    // forward into the customer lobby (in front of the counter) so they
+    // don't stand inside the café's back work-counter.
+    place(g, d.x, d.y, d.z + (d.floor ? 518 : 0));
     d.build(g);
     dg.add(g);
   }
@@ -240,29 +249,12 @@ function rebuildDecor(){
 }
 
 export function buildOrder3D(group){
-  // ---- lobby room ----
-  const room = new THREE.Group();
-  // back wall
-  const wall = new THREE.Mesh(new THREE.PlaneGeometry(2400,1200), mat('#e7d3b0',{rough:0.98, noCache:true}));
-  wall.material.map = plasterTexture(6, 3);
-  wall.position.set(0,120,-360); room.add(wall);
-  // wainscot
-  const wains = new THREE.Mesh(new THREE.PlaneGeometry(2400,150), mat('#b07a44',{rough:0.9, noCache:true}));
-  wains.material.map = woodTexture(7, 0.6);
-  wains.position.set(0,-140,-358); room.add(wains);
-  // window (bright sky panel) on the wall, over the pick-up side
-  const win = new THREE.Mesh(new THREE.PlaneGeometry(210,150), mat('#bfe3f0',{rough:0.4, emissive:'#7fb8cc', emissiveIntensity:0.4, noCache:true}));
-  place(win, 750, 215, -356); room.add(win);
-  const winFrame = new THREE.Mesh(new THREE.PlaneGeometry(226,166), mat('#6a4020',{rough:0.7}));
-  place(winFrame, 750, 215, -357); room.add(winFrame);
-  // door on the far right
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(120,230), mat('#8a5a30',{rough:0.8}));
-  place(door, 910, 240, -356); room.add(door);
-  // floor, receding
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(2400,1000), mat('#7a4c28',{rough:0.85, noCache:true}));
-  floor.material.map = woodTexture(8, 3);
-  floor.rotation.x = -Math.PI/2; floor.position.set(0,-232,-40); room.add(floor);
-  group.add(room);
+  // The café room itself (walls/floor/window/door) is built once by
+  // render/cafe.js — this builder only adds the lobby furniture. The
+  // lobby rig keeps the old virtual-pixel local space so the counter
+  // and every hand-placed decor prop anchor ports verbatim.
+  const rig = stationRig(RIGS.lobby.anchor, RIGS.lobby.at, RIGS.lobby.s);
+  group.add(rig);
 
   // ---- front counter (occludes customer lower bodies) ----
   const counter = new THREE.Group();
@@ -277,13 +269,13 @@ export function buildOrder3D(group){
   place(reg, 343, 408, 50); counter.add(reg);
   const screen = new THREE.Mesh(new THREE.BoxGeometry(58,20,4), mat('#bfe8d8',{rough:0.2, emissive:'#3a8f7a', emissiveIntensity:0.3}));
   place(screen, 343, 400, 73); counter.add(screen);
-  group.add(counter);
+  rig.add(counter);
 
   // decor props for owned shop items (rebuilt when purchases change)
   const decorGroup = new THREE.Group();
-  group.add(decorGroup);
+  rig.add(decorGroup);
 
-  order3d = { group, decorGroup, decorKey: null, rigs: new Map() };
+  order3d = { group, rig, decorGroup, decorKey: null, rigs: new Map() };
 }
 
 export function updateOrder3D(){
@@ -300,10 +292,14 @@ export function updateOrder3D(){
       order3d.group.add(rig.group);
       order3d.rigs.set(cust.id, rig);
     }
-    // place at the customer's virtual position; the figure sprite is
-    // anchored so its feet-origin lands here. z=5 keeps it behind the
-    // front counter (which occludes the lower body).
-    place(rig.group, cust.x, cust.y, 5);
+    // map the customer's virtual walk coords onto the lobby floor and
+    // billboard the sprite toward the camera. Feet sit ~70 below the
+    // figure origin (scaled), so lifting the group grounds them; the
+    // front counter (z≈-53) still occludes lower bodies (customers z≤-95).
+    const wp = lobbyPos(cust.x, cust.y);
+    rig.group.scale.setScalar(SPRITE_SCALE);
+    rig.group.position.set(wp.x, 70*SPRITE_SCALE, wp.z);
+    rig.group.rotation.y = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
     updateCustomerRig(rig, cust, t);
   }
   // remove sprites whose customers have left

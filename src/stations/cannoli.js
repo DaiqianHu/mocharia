@@ -260,17 +260,20 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
    shallow board sits under it. Empty ends show a dark cap. End
    hit-testing still uses the virtual-coord endAt() (shell sits at z≈0).
    ============================================================ */
-import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture, TOON_RAMP } from '../render/three.js';
-import { stationRoom3D } from '../render/scene3d.js';
+import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture, TOON_RAMP, stationRig } from '../render/three.js';
+import { RIGS } from '../render/layout3d.js';
 
 let can3d = null;
 
 export function buildCannoli3D(group){
-  group.add(stationRoom3D());
+  // cannoli geometry stays in old virtual-pixel local space; the rig
+  // scales it down onto the café's side bench (layout3d.js)
+  const rig = stationRig(RIGS.cannoli.anchor, RIGS.cannoli.at, RIGS.cannoli.s);
+  group.add(rig);
   const {cx,cy,len,r} = CANNOLI;
   const g = new THREE.Group();
   place(g, cx, cy, 12);
-  group.add(g);
+  rig.add(g);
 
   const sh = shadowDecal(len*0.62, 34); sh.position.set(0,-r-6,0); g.add(sh);
 

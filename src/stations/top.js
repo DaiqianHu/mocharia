@@ -123,13 +123,24 @@ export function updateTop(dt){
 export function chooseSize(sz){
   const t=G.active; if(!t || t.cupSize===sz) return;
   t.cupSize = sz;
-  popText(TOP_CUP.cx, TOP_CUP.by-TOP_CUP.h-40, SIZE_NAME[sz]+' cup!', '#ffe9a8', 17);
+  const s = cupScreen(TOP_CUP.h + 60);
+  popText(s.x, s.y, SIZE_NAME[sz]+' cup!', '#ffe9a8', 17);
   blip(sz==='S'?520:sz==='M'?600:680, 0.09, 'triangle', 0.11);
 }
 
-/* the "Small cup · tap to change" card under the cup */
+/* the "Small cup · tap to change" card under the cup — drawn at the
+   cup's projected screen position; the hit rect is wherever it was
+   last drawn (kept in _sizeCard so draw + hit-test always agree) */
+let _sizeCard = null;
 export function sizeCardHit(x,y){
-  return Math.abs(x-TOP_CUP.cx)<=62 && y>=TOP_CUP.by+18 && y<=TOP_CUP.by+40;
+  if (!_sizeCard) return false;
+  return Math.abs(x-_sizeCard.x)<=62 && y>=_sizeCard.y && y<=_sizeCard.y+22;
+}
+
+/* project a point `dy` world-units above the cup base to virtual px */
+function cupScreen(dy){
+  const a = RIGS.top.at;
+  return projectVirtual(a.x, a.y + RIGS.top.s*dy, a.z);
 }
 
 /* 2D glass-cup icon for the picker, scaled like the real 3D cups */
@@ -172,7 +183,8 @@ export function clearToppings(){
   const t=G.active; if(!t) return;
   t.top.whip = { cov:new Array(COV_BINS).fill(0), blobs:[] };
   t.top.drizzle=null; t.top.sprinkles=null;
-  popText(TOP_CUP.cx, TOP_CUP.by-TOP_CUP.h-70, 'Wiped clean', '#ffe9a8', 16);
+  const s = cupScreen(TOP_CUP.h + 80);
+  popText(s.x, s.y, 'Wiped clean', '#ffe9a8', 16);
   blip(320,0.09,'triangle',0.1);
 }
 
@@ -198,18 +210,23 @@ export function drawTopStation(c){
   }
   // size card under the cup — shows YOUR pick, tap it to change your mind
   if (t){
-    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,TOP_CUP.cx-62,TOP_CUP.by+18,124,22,8); c.fill();
+    const base = cupScreen(-16);
+    _sizeCard = { x: base.x, y: base.y };
+    c.fillStyle='rgba(42,22,12,0.75)'; rr(c,base.x-62,base.y,124,22,8); c.fill();
     c.fillStyle='#ffe9b8'; c.font='800 11px Verdana, sans-serif';
     c.textAlign='center'; c.textBaseline='middle';
-    c.fillText(SIZE_NAME[t.cupSize]+' cup · change', TOP_CUP.cx, TOP_CUP.by+29);
+    c.fillText(SIZE_NAME[t.cupSize]+' cup · change', base.x, base.y+11);
   }
   // held container follows the pointer, tilted to pour
   if (G.drag && t){
     drawContainer(c, G.drag, G.pointer.x, G.pointer.y-14, true);
-    if (overCup(G.pointer.x,G.pointer.y)){
+    if (hitTestScene(G.pointer.x, G.pointer.y, 'top')){
       const glow=0.5+Math.sin(G.time*7)*0.3;
+      const tl = cupScreen(TOP_CUP.h + 10);
+      const halfW = (cupScreen(TOP_CUP.h + 10).x - projectVirtual(
+        RIGS.top.at.x - RIGS.top.s*(TOP_CUP.w/2+14), RIGS.top.at.y + RIGS.top.s*(TOP_CUP.h+10), RIGS.top.at.z).x);
       c.strokeStyle='rgba(255,235,150,'+glow.toFixed(2)+')'; c.lineWidth=2.6; c.setLineDash([7,6]);
-      rr(c,TOP_CUP.cx-TOP_CUP.w/2-14,TOP_CUP.by-TOP_CUP.h-56,TOP_CUP.w+28,66,12);
+      rr(c, tl.x-Math.abs(halfW), tl.y-56, Math.abs(halfW)*2, 66, 12);
       c.stroke(); c.setLineDash([]);
     }
   }
@@ -302,8 +319,8 @@ export function shelfHit(x,y){
    InstancedMesh with per-instance color. The drop-zone collider plane
    feeds relX back to updateTop() via the raycaster.
    ============================================================ */
-import { THREE, place, mat, shadowDecal, colliders, hitTestScene, colliderMaterial, TOON_RAMP } from '../render/three.js';
-import { stationRoom3D } from '../render/scene3d.js';
+import { THREE, place, mat, shadowDecal, colliders, hitTestScene, colliderMaterial, TOON_RAMP, stationRig, projectVirtual } from '../render/three.js';
+import { RIGS } from '../render/layout3d.js';
 
 const CUPH = TOP_CUP.h, CUPTOPR = TOP_CUP.w/2, CUPBOTR = TOP_CUP.w*0.78/2;
 const FLUID_INSET = 3;   // keep fluid just inside the glass wall
@@ -337,11 +354,14 @@ function cupProfile(){
 }
 
 export function buildTop3D(group){
-  group.add(stationRoom3D());
+  // cup geometry stays in old virtual-pixel local space; the rig scales
+  // it down onto the café's topping island (layout3d.js)
+  const rig = stationRig(RIGS.top.anchor, RIGS.top.at, RIGS.top.s);
+  group.add(rig);
 
   const cup = new THREE.Group();
   place(cup, TOP_CUP.cx, TOP_CUP.by, 20);
-  group.add(cup);
+  rig.add(cup);
 
   const shadow = shadowDecal(CUPTOPR*1.5, CUPTOPR*0.7);
   shadow.position.set(0,1,0);
@@ -404,7 +424,7 @@ export function buildTop3D(group){
   const zone = new THREE.Mesh(new THREE.PlaneGeometry(TOP_CUP.w, CUPH+140), colliderMaterial());
   zone.userData.w = TOP_CUP.w;
   place(zone, TOP_CUP.cx, TOP_CUP.by - CUPH/2 - 30, 40);
-  group.add(zone);
+  rig.add(zone);
   colliders.cupZone = zone;
 
   cup3d = { cup, fluid, foam, shell, whip, spr, driz, drizMat, fluidMat, foamMat, ice };

@@ -260,7 +260,7 @@ export function drawCannoli(c, cn, cx, cy, len, r, scale){
    shallow board sits under it. Empty ends show a dark cap. End
    hit-testing still uses the virtual-coord endAt() (shell sits at z≈0).
    ============================================================ */
-import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture } from '../render/three.js';
+import { THREE, place, mat, shadowDecal, woodTexture, pastryTexture, TOON_RAMP } from '../render/three.js';
 import { stationRoom3D } from '../render/scene3d.js';
 
 let can3d = null;
@@ -331,7 +331,7 @@ export function buildCannoli3D(group){
     creams[key] = cream;
     // end sprinkles
     const spr = new THREE.InstancedMesh(new THREE.BoxGeometry(7.5,2.8,2.8),
-      new THREE.MeshStandardMaterial({roughness:0.5}), MAX_END_SPRINKLES);
+      new THREE.MeshToonMaterial({gradientMap:TOON_RAMP}), MAX_END_SPRINKLES);
     spr.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_END_SPRINKLES*3),3);
     spr.count = 0; spr.renderOrder = 3; g.add(spr);
     sprs[key] = spr;

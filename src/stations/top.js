@@ -302,7 +302,7 @@ export function shelfHit(x,y){
    InstancedMesh with per-instance color. The drop-zone collider plane
    feeds relX back to updateTop() via the raycaster.
    ============================================================ */
-import { THREE, place, mat, shadowDecal, colliders, hitTestScene, colliderMaterial } from '../render/three.js';
+import { THREE, place, mat, shadowDecal, colliders, hitTestScene, colliderMaterial, TOON_RAMP } from '../render/three.js';
 import { stationRoom3D } from '../render/scene3d.js';
 
 const CUPH = TOP_CUP.h, CUPTOPR = TOP_CUP.w/2, CUPBOTR = TOP_CUP.w*0.78/2;
@@ -359,8 +359,8 @@ export function buildTop3D(group){
 
   // glass shell (translucent, drawn over fluids)
   const shellGeo = new THREE.LatheGeometry(cupProfile(), 36);
-  const shellMat = new THREE.MeshStandardMaterial({
-    color:0xdfeef5, roughness:0.15, metalness:0, transparent:true, opacity:0.26,
+  const shellMat = new THREE.MeshToonMaterial({
+    color:0xdfeef5, gradientMap:TOON_RAMP, transparent:true, opacity:0.26,
     depthWrite:false, side:THREE.DoubleSide });
   const shell = new THREE.Mesh(shellGeo, shellMat);
   shell.renderOrder = 5;
@@ -379,7 +379,7 @@ export function buildTop3D(group){
 
   // sprinkles: instanced rounded boxes with per-instance color
   const spr = new THREE.InstancedMesh(new THREE.BoxGeometry(6.5,2.4,2.4),
-    new THREE.MeshStandardMaterial({roughness:0.5}), 70);
+    new THREE.MeshToonMaterial({gradientMap:TOON_RAMP}), 70);
   spr.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(70*3),3);
   spr.count = 0; spr.renderOrder = 8;
   cup.add(spr);
@@ -394,7 +394,7 @@ export function buildTop3D(group){
   const ice = new THREE.Group();
   for (let i=0;i<3;i++){
     const cube = new THREE.Mesh(new THREE.BoxGeometry(16,16,16),
-      new THREE.MeshStandardMaterial({color:0xdff0ff, roughness:0.1, transparent:true, opacity:0.6}));
+      new THREE.MeshToonMaterial({color:0xdff0ff, gradientMap:TOON_RAMP, transparent:true, opacity:0.6}));
     cube.rotation.set(rand(0,1),rand(0,1),rand(0,1));
     ice.add(cube);
   }

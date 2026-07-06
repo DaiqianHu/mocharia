@@ -89,7 +89,7 @@ export function isCold(m){ return m.temp!=='hot'; }
    selection still uses the 2D machineRect hit-test (valid at z≈0).
    ============================================================ */
 import { THREE, place, mat, fillMesh, fluidGeometry, shadowDecal,
-         colliders, colliderMaterial } from '../render/three.js';
+         colliders, colliderMaterial, TOON_RAMP } from '../render/three.js';
 import { stationRoom3D } from '../render/scene3d.js';
 
 const CUP_H = CUP_BOT - CUP_TOP;              // measuring-cup height (98)
@@ -135,8 +135,8 @@ export function buildBrew3D(group){
     // measuring cup (translucent glass) + fluid
     const glassGeo = new THREE.CylinderGeometry(CUP_TOPR, CUP_BOTR, CUP_H, 26, 1, true);
     glassGeo.translate(0, CUP_H/2, 0);
-    const glass = new THREE.Mesh(glassGeo, new THREE.MeshStandardMaterial({
-      color:0xd6e6f0, roughness:0.15, metalness:0, transparent:true, opacity:0.24,
+    const glass = new THREE.Mesh(glassGeo, new THREE.MeshToonMaterial({
+      color:0xd6e6f0, gradientMap:TOON_RAMP, transparent:true, opacity:0.24,
       depthWrite:false, side:THREE.DoubleSide }));
     glass.renderOrder = 5; glass.position.set(0,0,8); g.add(glass);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(CUP_TOPR,2.4,8,26),
@@ -167,7 +167,7 @@ export function buildBrew3D(group){
     const ice = new THREE.Group();
     for (let j=0;j<2;j++){
       const cube = new THREE.Mesh(new THREE.BoxGeometry(13,13,13),
-        new THREE.MeshStandardMaterial({color:0xdff0ff, roughness:0.1, transparent:true, opacity:0.6}));
+        new THREE.MeshToonMaterial({color:0xdff0ff, gradientMap:TOON_RAMP, transparent:true, opacity:0.6}));
       cube.rotation.set(j,j*1.7,j*0.6); ice.add(cube);
     }
     ice.position.z=8; g.add(ice);

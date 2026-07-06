@@ -249,16 +249,36 @@ export function hitTestScene(px, py, station){
 }
 
 /* ============================================================
-   Materials — small cache of MeshStandardMaterials by hex color.
+   Cartoon look — a shared 3-step toon gradient ramp. MeshToonMaterial
+   quantizes our existing hemisphere+directional lighting into flat
+   colour bands (Papa's-style cel shading). The ramp is lifted off pure
+   black so the darkest band still reads as coloured shadow, not ink.
+   Exported so the few hand-built materials (glass, instanced sprinkles)
+   can share it and match. See character.js for the 2D cartoon customers
+   this makes the 3D props sit alongside without a style clash.
+   ============================================================ */
+export const TOON_RAMP = (() => {
+  const steps = new Uint8Array([107, 184, 255]); // ≈ 0.42 / 0.72 / 1.0
+  const tex = new THREE.DataTexture(steps, steps.length, 1, THREE.RedFormat);
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+})();
+
+/* ============================================================
+   Materials — small cache of cel-shaded MeshToonMaterials by hex colour.
+   (rough/metal opts are accepted for call-site compatibility but ignored;
+   toon shading has no glossy term.)
    ============================================================ */
 const _matCache = new Map();
 export function mat(color, opts={}){
   const key = color+'|'+(opts.rough??0.62)+'|'+(opts.metal??0.0)+'|'+(opts.emissive||'')+'|'+(opts.transparent?('t'+opts.opacity):'');
   if (_matCache.has(key) && !opts.noCache) return _matCache.get(key);
-  const m = new THREE.MeshStandardMaterial({
+  const m = new THREE.MeshToonMaterial({
     color: new THREE.Color(color),
-    roughness: opts.rough ?? 0.62,
-    metalness: opts.metal ?? 0.0,
+    gradientMap: TOON_RAMP,
   });
   if (opts.emissive){ m.emissive = new THREE.Color(opts.emissive); m.emissiveIntensity = opts.emissiveIntensity ?? 1; }
   if (opts.transparent){ m.transparent = true; m.opacity = opts.opacity ?? 0.5; }

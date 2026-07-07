@@ -38,6 +38,46 @@ export function drawRail(c){
   for (const t of G.tickets) drawTicketCard(c, t);
 }
 
+/* streak combo badge — tucked under the station title card */
+export function drawStreakBadge(c){
+  const n = G.streak.n;
+  if (n<2) return;
+  const x=14, y=RAIL_H+54, w=86, h=36;
+  const wob = 1 + 0.05*Math.sin(G.time*6);
+  c.save();
+  c.translate(x+w/2, y+h/2); c.scale(wob,wob);
+  c.fillStyle='rgba(70,30,8,0.85)'; rr(c,-w/2,-h/2,w,h,10); c.fill();
+  c.strokeStyle='#ffd24a'; c.lineWidth=2; rr(c,-w/2,-h/2,w,h,10); c.stroke();
+  c.fillStyle='#ffd24a'; c.font='800 18px Verdana, sans-serif';
+  c.textAlign='center'; c.textBaseline='middle';
+  c.fillText('🔥 x'+n, 0, 1);
+  c.restore();
+}
+
+/* rush-hour ribbon (active) / flashing warning (3s before) */
+export function drawRushBanner(c){
+  const r = G.rush; if (!r) return;
+  if (r.active){
+    const y = RAIL_H+14;
+    c.save();
+    const g = c.createLinearGradient(VW/2-190,0,VW/2+190,0);
+    g.addColorStop(0,'rgba(210,90,30,0)'); g.addColorStop(0.15,'rgba(210,90,30,0.92)');
+    g.addColorStop(0.85,'rgba(210,90,30,0.92)'); g.addColorStop(1,'rgba(210,90,30,0)');
+    c.fillStyle=g; c.fillRect(VW/2-190, y, 380, 30);
+    c.fillStyle='#fff3d0'; c.font='900 17px Verdana, sans-serif';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('☕ RUSH HOUR! Tips +50% · '+Math.ceil(r.t)+'s', VW/2, y+16);
+    c.restore();
+  } else if (r.warn>0){
+    if (Math.floor(G.time*3)%2===0) return;    // flash
+    c.save();
+    c.fillStyle='#ffb24a'; c.font='900 18px Verdana, sans-serif';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText('☕ RUSH HOUR INCOMING!', VW/2, RAIL_H+30);
+    c.restore();
+  }
+}
+
 function drawTicketCard(c, t){
   const x=t.x, y=8, w=118, h=82;
   const active = (t===G.active);

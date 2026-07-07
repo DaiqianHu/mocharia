@@ -119,11 +119,28 @@ s = await st();
 expect('cream piped both ends', s.active.cannoli.fillL>0.15 && s.active.cannoli.fillR>0.15);
 await shoot(page,'p2_cannoli');
 
-// ---- SERVE ----
+// ---- SERVE (with a forced rush + streak so the tip multipliers are exercised) ----
+const pre = await page.evaluate(()=>{
+  window.G.streak.n = 3;
+  window.G.rush = { at:[], idx:0, warn:0, active:true, t:9 };
+  const t = window.G.active;
+  return { price: t.order.price, pat: t.cust.patience };
+});
 await click(832, 501);
 await new Promise(r=>setTimeout(r,400));
 s = await st();
 expect('served (ticket resolved)', s.tickets===0);
+{
+  const post = await page.evaluate(()=>({ served: window.G.served[0], streak: window.G.streak.n }));
+  const total = post.served.total;
+  const stars = total>=90?5 : total>=75?4 : total>=58?3 : total>=38?2 : 1;
+  const n = stars>=3 ? 4 : 0;                       // serveActive bumps/resets before the tip
+  const pat = Math.max(0, Math.min(1, pre.pat));
+  const expectTip = pre.price*(total/100)*(0.25+0.75*pat)*(1+0.1*Math.min(5,n))*1.5;
+  const gotTip = post.served.earn - pre.price;
+  expect('rush+streak tip multipliers applied', Math.abs(gotTip-expectTip) <= Math.max(0.08, expectTip*0.05));
+  expect('streak counter updated', post.streak===n);
+}
 await shoot(page,'p2_served');
 
 const errs = await page.evaluate(()=>null);

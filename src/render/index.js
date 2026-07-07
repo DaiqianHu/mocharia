@@ -12,7 +12,7 @@ import { drawOrderStation } from '../stations/order.js';
 import { drawBrewStation } from '../stations/brew.js';
 import { drawTopStation } from '../stations/top.js';
 import { drawCannoliStation } from '../stations/cannoli.js';
-import { drawRail, drawPanel } from './hud.js';
+import { drawRail, drawPanel, drawRushBanner, drawStreakBadge } from './hud.js';
 import { drawTitle, drawDayIntro, drawSummary, drawShop, drawResult } from './screens.js';
 
 export function draw(){
@@ -46,6 +46,8 @@ export function draw(){
     else drawCannoliStation(ctx);
     if (G.station!=='order') drawPanel(ctx);
     drawRail(ctx);
+    drawRushBanner(ctx);
+    drawStreakBadge(ctx);
     // tabs
     ctx.fillStyle='#2c180e'; ctx.fillRect(0,TABS_Y-8,VW,VH-TABS_Y+8);
     for (const b of BT.tabs) b.draw(ctx);

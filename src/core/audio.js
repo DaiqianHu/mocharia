@@ -86,6 +86,13 @@ export function fanfare(){
   setTimeout(()=>{ blip(1047,0.5,'square',0.07); blip(1319,0.5,'sine',0.06); },400);
 }
 
+/* rush-hour horn — two quick honks then a rising chord */
+export function rushHorn(){
+  blip(392,0.16,'square',0.09);
+  setTimeout(()=>blip(392,0.16,'square',0.09),180);
+  setTimeout(()=>{ blip(523,0.4,'square',0.1); blip(659,0.4,'sine',0.07); },360);
+}
+
 /* liquid pour — filtered noise sweeping down */
 export function pour(dur=0.45){
   const a = audioCtx(); if(!a || !noiseBuf) return;

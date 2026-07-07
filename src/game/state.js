@@ -6,7 +6,7 @@
    ============================================================ */
 import { VW, clamp, rand } from '../core/constants.js';
 import { updateParticles, updateAmbient, spawnParticle, confettiBurst, popText } from '../core/particles.js';
-import { blip, ding, chaChing, starChime, fanfare, pour } from '../core/audio.js';
+import { blip, ding, chaChing, starChime, fanfare, pour, rushHorn } from '../core/audio.js';
 import { MACHINES } from './layout.js';
 import { COFFEE_TIME, MILK_TIME, customersForDay } from './data.js';
 import { Customer } from './customer.js';
@@ -23,6 +23,9 @@ export const G = {
   time:0, day:1, money:0,
   customers:[], tickets:[], active:null,
   spawn:{ left:0, total:0, timer:0 },
+  dayT:0,                          // seconds since the day opened
+  rush:null,                       // rush-hour plan (planRush), null before day 3
+  streak:{ n:0 },                  // consecutive 3★+ serves (tip combo)
   served:[],                       // day results
   result:null,                     // serve overlay data
   shake:0, shakeX:0, shakeY:0,
@@ -59,8 +62,42 @@ export function startDay(){
   G.spawn.timer = 1.2;
   G.station='order'; G.drag=null; G.cream=null;
   G.dayXp=0; G.rankRes=null; G.stationAvg=null; G.dayEndT=0;
+  G.dayT=0; G.streak.n=0;
+  G.rush = G.day>=3 ? planRush(G.day) : null;
   resetMachines();
   G.state='play';
+}
+
+/* rush-hour windows: one mid-morning wave, a second on later days */
+function planRush(day){
+  const at = [rand(24,34)];
+  if (day>=6) at.push(rand(66,84));
+  return { at, idx:0, warn:0, active:false, t:0 };
+}
+
+const RUSH_LEN = 18;
+function updateRush(dt){
+  const r = G.rush; if (!r) return;
+  if (r.active){
+    r.t -= dt;
+    if (r.t<=0){
+      r.active=false;
+      popText(VW/2, 170, 'Rush survived! ☕', '#ffd24a', 20);
+    }
+    return;
+  }
+  if (r.idx >= r.at.length) return;
+  const next = r.at[r.idx];
+  if (G.dayT >= next){
+    r.idx++; r.warn=0; r.active=true; r.t=RUSH_LEN;
+    G.spawn.left += 2;                         // the wave itself
+    G.spawn.timer = Math.min(G.spawn.timer, 0.6);
+    rushHorn();
+    G.shake = Math.max(G.shake, 3);
+  } else if (G.dayT >= next-3){
+    if (r.warn<=0) blip(660,0.12,'triangle',0.1);
+    r.warn = next - G.dayT;
+  }
 }
 
 export function queueCustomers(){ return G.customers.filter(c=>c.state==='queue'||c.state==='enter'); }
@@ -91,9 +128,28 @@ export function serveActive(){
   const parts = [bs, ts]; if (cs!==null) parts.push(cs);
   const total = parts.reduce((a,b)=>a+b,0)/parts.length;
   const pat = clamp(t.cust.patience,0,1);
-  const tip = o.price * (total/100) * (0.25 + 0.75*pat);
-  const earn = o.price + tip;
   const stars = total>=90?5 : total>=75?4 : total>=58?3 : total>=38?2 : 1;
+  // streak of 3★+ serves builds a tip combo; only a rough serve breaks it
+  const sk = G.streak;
+  if (stars>=3){
+    sk.n++;
+    if (sk.n>=2){
+      popText(VW/2, 190, 'COMBO x'+sk.n+'!', '#ffd24a', Math.min(34, 16+sk.n*3));
+      starChime(Math.min(5, sk.n));
+      if (sk.n>=4) confettiBurst(VW/2, 230, sk.n>=6?90:40);
+      if (sk.n>=6) G.shake = Math.max(G.shake, 4);
+    }
+  } else {
+    if (sk.n>=2) popText(VW/2, 190, 'Streak reset — you got this!', '#ffc9a0', 15);
+    sk.n=0;
+  }
+  let tip = o.price * (total/100) * (0.25 + 0.75*pat);
+  tip *= 1 + 0.1*Math.min(5, sk.n);
+  if (G.rush && G.rush.active){
+    tip *= 1.5;
+    popText(VW/2, 214, 'RUSH BONUS! +50% tip', '#ffb24a', 15);
+  }
+  const earn = o.price + tip;
   const xp = xpFor(total, o);
   G.money += earn;
   G.dayXp += xp; P.xp += xp;
@@ -169,6 +225,9 @@ export function update(dt){
     refreshButtonState(); return;
   }
 
+  G.dayT += dt;
+  updateRush(dt);
+
   // spawning
   if (G.spawn.left>0){
     G.spawn.timer -= dt;
@@ -176,7 +235,7 @@ export function update(dt){
       G.spawn.left--;
       const c = new Customer(G.day, unlockedNow(), patienceCalm());
       G.customers.push(c);
-      const base = clamp(11 - G.day*0.8, 4.5, 11);
+      const base = clamp(11 - G.day*0.8, 4.5, 11) * (G.rush && G.rush.active ? 0.45 : 1);
       G.spawn.timer = base*rand(0.7,1.3);
       layoutCustomers();
       if (owns('doorbell')){

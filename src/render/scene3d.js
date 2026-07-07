@@ -11,7 +11,7 @@ import { scene, camera, projectVirtual,
          orderGroup, brewGroup, topGroup, cannoliGroup,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';
-import { snapView, updateCamera, dollyCamera } from './camera.js';
+import { snapView, updateCamera } from './camera.js';
 import { renderInk } from './ink.js';
 import { updateFx3d } from './fx3d.js';
 import { RIGS, VIEWS, lobbyPos } from './layout3d.js';
@@ -57,8 +57,8 @@ export function initScene3d(){
 
 /* Called from main.js each frame after update(dt). Syncs the 3D scene to
    game state and renders — during play, and during dayIntro where the café
-   shows through a translucent card while the camera glides in (2D-only
-   screens keep the opaque 2D letterbox fill covering #game3d). */
+   shows through a translucent card in a static wide establishing shot
+   (2D-only screens keep the opaque 2D letterbox fill covering #game3d). */
 export function update3d(){
   if (G.state!=='play' && G.state!=='dayIntro'){ lastNow = null; return; }
   if (!inited) initScene3d();
@@ -72,15 +72,15 @@ export function update3d(){
   lastNow = now;
 
   // one continuous café: every station syncs every frame (each update is
-  // a cheap model-reader), and the camera flight is the station switch.
+  // a cheap model-reader), and switching stations hard-cuts the camera.
   updateOrder3D();
   updateBrew3D(dt);
   updateTop3D();
   updateCannoli3D();
   updateFx3d(dt);
 
-  if (G.state==='dayIntro') dollyCamera(G.introT);
-  else updateCamera(dt, G.station, G.shakeX, G.shakeY);
+  if (G.state==='dayIntro') updateCamera('intro');
+  else updateCamera(G.station, G.shakeX, G.shakeY);
 
   renderInk(scene, camera);
 }

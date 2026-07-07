@@ -134,7 +134,7 @@ export function drawTitle(c){
 }
 
 export function drawDayIntro(c){
-  // the 3D café glides by underneath (scene3d dayIntro dolly); just a
+  // the 3D café sits underneath in a static wide shot; just a
   // light veil so the card and button pop
   c.fillStyle='rgba(20,10,6,0.28)'; c.fillRect(0,0,VW,VH);
   const t=easeOut(Math.min(1,G.introT/0.6));

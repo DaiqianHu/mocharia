@@ -32,15 +32,16 @@ export const RIGS = {
   cannoli: { anchor: {ax:450, ay:352, az:12},   at: {x:-590, y:ROOM.counterTop, z:-250}, s: 0.40 },
 };
 
-/* Cinematic camera pose per station: position, lookAt target, fov. */
+/* Fixed camera pose per station (hard cut on switch, never travels).
+   `intro` is the dayIntro establishing shot: a static wide view from
+   beside the door taking in the whole café behind the day card. */
 export const VIEWS = {
   order:   { pos: {x:-130, y:310, z:390},  tgt: {x:70,   y:100, z:-170}, fov: 48 },
   brew:    { pos: {x:280,  y:310, z:160},  tgt: {x:437,  y:145, z:-400}, fov: 46 },
   top:     { pos: {x:-420, y:250, z:150},  tgt: {x:-315, y:135, z:-190}, fov: 42 },
   cannoli: { pos: {x:-478, y:212, z:-48},  tgt: {x:-602, y:118, z:-272}, fov: 40 },
+  intro:   { pos: {x:560,  y:240, z:470},  tgt: {x:-260, y:100, z:-280}, fov: 48 },
 };
-
-export const FLY_TIME = 0.7;   // seconds for the camera swoop between stations
 
 /* lobby mapping: the customer walk sim stays in old virtual coords
    (game/customer.js tx/ty targets are untouched); this maps a virtual

@@ -5,7 +5,7 @@
    scatter, blurred shadow decals, raycast hit-testing).
 
    Coordinate contract (the real-3D café): world y is up, the café
-   floor is y=0, and the camera (driven by render/camera.js) flies
+   floor is y=0, and the camera (driven by render/camera.js) hard-cuts
    between per-station viewpoints defined in render/layout3d.js.
 
    Station geometry is still authored in the old virtual-pixel local
@@ -39,8 +39,7 @@ export const scene = new THREE.Scene();
 
 // A perspective camera with a fixed VW/VH aspect (the canvas always
 // represents the letterboxed virtual rect). Its pose — position, target
-// and fov per station, plus the fly-between tween — is driven every
-// frame by render/camera.js.
+// and fov per station — is driven every frame by render/camera.js.
 export const camera = new THREE.PerspectiveCamera(45, VW/VH, 10, 3200);
 camera.position.set(0, 300, 500);
 camera.lookAt(0, 100, -100);

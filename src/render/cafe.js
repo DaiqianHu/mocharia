@@ -1,6 +1,6 @@
 /* ============================================================
    The café interior — one continuous room hosting all four stations
-   (built once at init, always visible; the camera flies between
+   (built once at init, always visible; the camera cuts between
    workspaces). Floor, walls, window, door and menu board, plus the
    three work counters the station rigs sit on:
      back counter (right)  -> brew machine line
@@ -39,6 +39,14 @@ export function buildCafe(){
   floor.rotation.x = -Math.PI/2;
   floor.position.set(cx, 0, cz);
   g.add(floor);
+
+  // planked wood ceiling — closes the room so wide shots (the dayIntro
+  // establishing view) never see black void above the wall tops
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W, D), mat('#5a3a20', {noCache:true}));
+  ceil.material.map = woodTexture(9, 5);
+  ceil.rotation.x = Math.PI/2;
+  ceil.position.set(cx, ROOM.wallH, cz);
+  g.add(ceil);
 
   // back wall + wainscot
   const back = new THREE.Mesh(new THREE.PlaneGeometry(W, ROOM.wallH), mat('#e7d3b0', {noCache:true}));

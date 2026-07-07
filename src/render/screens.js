@@ -134,9 +134,9 @@ export function drawTitle(c){
 }
 
 export function drawDayIntro(c){
-  drawShopBackdrop(c);
-  drawWood(c,430,VH-430);
-  c.fillStyle='rgba(20,10,6,0.55)'; c.fillRect(0,0,VW,VH);
+  // the 3D café glides by underneath (scene3d dayIntro dolly); just a
+  // light veil so the card and button pop
+  c.fillStyle='rgba(20,10,6,0.28)'; c.fillRect(0,0,VW,VH);
   const t=easeOut(Math.min(1,G.introT/0.6));
   const cy=lerp(-320,120,t);
   const hol = currentHoliday();

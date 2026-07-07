@@ -11,8 +11,9 @@ import { scene, camera, renderer, projectVirtual,
          orderGroup, brewGroup, topGroup, cannoliGroup,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';
-import { snapView, updateCamera } from './camera.js';
+import { snapView, updateCamera, dollyCamera } from './camera.js';
 import { renderInk } from './ink.js';
+import { updateFx3d } from './fx3d.js';
 import { RIGS, VIEWS, lobbyPos } from './layout3d.js';
 import { MACHINES, TOP_CUP, CANNOLI } from '../game/layout.js';
 import { G, currentHoliday } from '../game/state.js';
@@ -55,27 +56,31 @@ export function initScene3d(){
 }
 
 /* Called from main.js each frame after update(dt). Syncs the 3D scene to
-   game state and renders — but only while playing (2D-only screens keep the
-   opaque 2D letterbox fill covering #game3d). */
+   game state and renders — during play, and during dayIntro where the café
+   shows through a translucent card while the camera glides in (2D-only
+   screens keep the opaque 2D letterbox fill covering #game3d). */
 export function update3d(){
-  if (G.state!=='play'){ lastNow = null; return; }
+  if (G.state!=='play' && G.state!=='dayIntro'){ lastNow = null; return; }
   if (!inited) initScene3d();
 
   const hol = currentHoliday();
   const hid = hol ? hol.id : '__none__';
   if (hid!==lastHoliday){ setHolidayLighting(hol); lastHoliday = hid; }
 
-  // one continuous café: every station syncs every frame (each update is
-  // a cheap model-reader), and the camera flight is the station switch.
-  updateOrder3D();
-  updateBrew3D();
-  updateTop3D();
-  updateCannoli3D();
-
   const now = performance.now()/1000;
   const dt = lastNow===null ? 0.016 : Math.min(0.05, now - lastNow);
   lastNow = now;
-  updateCamera(dt, G.station, G.shakeX, G.shakeY);
+
+  // one continuous café: every station syncs every frame (each update is
+  // a cheap model-reader), and the camera flight is the station switch.
+  updateOrder3D();
+  updateBrew3D(dt);
+  updateTop3D();
+  updateCannoli3D();
+  updateFx3d(dt);
+
+  if (G.state==='dayIntro') dollyCamera(G.introT);
+  else updateCamera(dt, G.station, G.shakeX, G.shakeY);
 
   renderInk(scene, camera);
 }

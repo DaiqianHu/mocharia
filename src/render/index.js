@@ -17,13 +17,13 @@ import { drawTitle, drawDayIntro, drawSummary, drawShop, drawResult } from './sc
 
 export function draw(){
   const d=VIEW.dpr;
-  const play = G.state==='play';
-  // letterbox / clear. During play the WebGL scene shows through #game3d, so
-  // the 2D layer must be TRANSPARENT (clearRect) over the play area instead of
-  // painting an opaque fill that would hide it. On 2D-only screens keep the
-  // opaque #160d0b letterbox fill.
+  const scene3d = G.state==='play' || G.state==='dayIntro';
+  // letterbox / clear. During play (and the dayIntro camera glide) the WebGL
+  // scene shows through #game3d, so the 2D layer must be TRANSPARENT
+  // (clearRect) instead of painting an opaque fill that would hide it. On
+  // 2D-only screens keep the opaque #160d0b letterbox fill.
   ctx.setTransform(d,0,0,d,0,0);
-  if (play){
+  if (scene3d){
     ctx.clearRect(0,0,canvas.width/d,canvas.height/d);
   } else {
     ctx.fillStyle='#160d0b';

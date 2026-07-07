@@ -21,7 +21,9 @@ export function takeOrder(){
   G.tickets.push(t);
   layoutTickets(); layoutCustomers();
   G.active = t;
-  popText(c.x, c.y-96, 'Order up!', '#ffe9a8', 20);
+  const wp = lobbyPos(c.x, c.y);
+  const a = projectVirtual(wp.x, 235, wp.z);
+  popText(a.x, a.y, 'Order up!', '#ffe9a8', 20);
   blip(520,0.08,'triangle',0.12,240);
   setTimeout(()=>blip(760,0.10,'triangle',0.12),80);
 }

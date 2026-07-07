@@ -8,6 +8,8 @@ import { choice, rand, randi, clamp, TAU, VW, shade, rr } from '../core/constant
 import { makeOrder, NAMES } from './data.js';
 import { popText } from '../core/particles.js';
 import { blip } from '../core/audio.js';
+import { lobbyPos } from '../render/layout3d.js';
+import { projectVirtual } from '../render/three.js';
 
 let _cid = 0;
 
@@ -51,7 +53,9 @@ export class Customer {
         this.grumbleT -= dt;
         if (this.grumbleT<=0){
           this.grumbleT = rand(5,10);
-          popText(this.x, this.y-108, choice(['Hmph!','My coffee!!','Tap tap tap...','Grr...']), '#ff8a6f', 15);
+          const wp = lobbyPos(this.x, this.y);
+          const a = projectVirtual(wp.x, 235, wp.z);   // just above the chibi head
+          popText(a.x, a.y, choice(['Hmph!','My coffee!!','Tap tap tap...','Grr...']), '#ff8a6f', 15);
           blip(150,0.12,'sawtooth',0.06,-40);
         }
       }

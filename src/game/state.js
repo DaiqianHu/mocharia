@@ -14,6 +14,7 @@ import { brewScore, topScore, cannoliScore, orderScore, xpFor } from './scoring.
 import { activeButtons, refreshButtonState } from './buttons.js';
 import { updateTop } from '../stations/top.js';
 import { updateCannoli } from '../stations/cannoli.js';
+import { machineHudAnchor } from '../stations/brew.js';
 import { P, unlockedItems, patienceCalm, brewSpeed, owns, applyRankUps, saveProgress, activeHoliday } from './progress.js';
 import { RANKS } from './data.js';
 
@@ -214,21 +215,13 @@ function updateMachines(dt){
   for (const m of G.machines){
     if (m.state!=='run') continue;
     m.t += dt;
-    // drips / steam while working
-    if (Math.random()<dt*14){
-      const cx = m.x+m.w/2;
-      if (m.kind==='coffee')
-        spawnParticle({type:'drop', x:cx+rand(-4,4), y:262, vy:rand(120,200), g:300,
-          size:rand(2,3.2), color:'#5a3220', life:0.4, alpha:0.9});
-      else
-        spawnParticle({type:'steam', x:cx+rand(-10,10), y:220, vy:rand(-30,-60),
-          size:rand(3,7), color:'rgba(255,255,255,0.7)', life:rand(0.5,1), sway:16, alpha:0.6});
-    }
+    // (pour stream + steam are 3D now — stations/brew.js updateBrew3D)
     if (m.t >= m.total){
       m.t = m.total; m.state='done';
       if (owns('alarm')){
         ding();
-        popText(m.x+m.w/2, 140, (m.kind==='coffee'?'Coffee':'Milk')+' ready!', '#8fe0a8', 15);
+        const a = machineHudAnchor(G.machines.indexOf(m), 250);
+        if (a) popText(a.x, a.y, (m.kind==='coffee'?'Coffee':'Milk')+' ready!', '#8fe0a8', 15);
       } else if (G.station==='brew'){
         blip(720,0.1,'sine',0.1);
       }
@@ -252,10 +245,11 @@ export function pourMachine(m){
   const t = G.active;
   if (!t || m.state!=='done') return;
   const slot = m.kind==='coffee' ? 'coffee' : 'milk';
-  if (t.cup[slot]){ popText(m.x+m.w/2, 150, 'Cup already has '+slot+'!', '#ffb08a', 14); return; }
+  const a = machineHudAnchor(G.machines.indexOf(m), 250) || { x:m.x+m.w/2, y:150 };
+  if (t.cup[slot]){ popText(a.x, a.y, 'Cup already has '+slot+'!', '#ffb08a', 14); return; }
   t.cup[slot] = { type:m.type, temp:m.temp, amt:m.amt, addin:m.addin };
   m.state='idle'; m.t=0;
-  popText(m.x+m.w/2, 150, 'Poured!', '#8fe0a8', 16);
+  popText(a.x, a.y, 'Poured!', '#8fe0a8', 16);
   pour(0.5);
   blip(640,0.1,'sine',0.12,180);
 }

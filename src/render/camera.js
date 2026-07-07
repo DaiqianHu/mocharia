@@ -29,6 +29,29 @@ export function snapView(station){
   t = 1;
 }
 
+/* dayIntro establishing shot: a slow glide from a wide view by the
+   door across the café toward the order-station viewpoint. Writes
+   `cur` and marks the station as '__dolly__' so the first play-frame
+   tween flies smoothly from wherever the glide had reached. */
+const DOLLY_FROM = { pos:{x:560, y:290, z:470}, tgt:{x:-260, y:150, z:-280}, fov:54 };
+export function dollyCamera(time){
+  const o = VIEWS.order;
+  const e = Math.min(1, time/12);
+  const k = 1 - (1-e)*(1-e);           // ease-out, still creeping at the end
+  cur.px = DOLLY_FROM.pos.x + (o.pos.x - DOLLY_FROM.pos.x)*k;
+  cur.py = DOLLY_FROM.pos.y + (o.pos.y - DOLLY_FROM.pos.y)*k;
+  cur.pz = DOLLY_FROM.pos.z + (o.pos.z - DOLLY_FROM.pos.z)*k;
+  cur.tx = DOLLY_FROM.tgt.x + (o.tgt.x - DOLLY_FROM.tgt.x)*k;
+  cur.ty = DOLLY_FROM.tgt.y + (o.tgt.y - DOLLY_FROM.tgt.y)*k;
+  cur.tz = DOLLY_FROM.tgt.z + (o.tgt.z - DOLLY_FROM.tgt.z)*k;
+  cur.fov = DOLLY_FROM.fov + (o.fov - DOLLY_FROM.fov)*k;
+  curStation = '__dolly__';
+  t = 1;
+  camera.position.set(cur.px, cur.py, cur.pz);
+  if (camera.fov !== cur.fov){ camera.fov = cur.fov; camera.updateProjectionMatrix(); }
+  camera.lookAt(cur.tx, cur.ty, cur.tz);
+}
+
 export function updateCamera(dt, station, shakeX=0, shakeY=0){
   if (!curStation) snapView(station);
   if (station !== curStation){

@@ -5,8 +5,8 @@
    then start it and wait out the brew timer. Pour the finished
    cup into the active ticket's drink.
    ============================================================ */
-import { TAU, rr, shade, clamp, mixHex } from '../core/constants.js';
-import { RAIL_H } from '../game/layout.js';
+import { TAU, rr, shade, clamp, mixHex, rand } from '../core/constants.js';
+import { RAIL_H, MACHINES } from '../game/layout.js';
 import { G } from '../game/state.js';
 import { BT } from '../game/buttons.js';
 import { owns } from '../game/progress.js';
@@ -97,6 +97,16 @@ export function isCold(m){ return m.temp!=='hot'; }
 import { THREE, place, mat, fillMesh, fluidGeometry, shadowDecal,
          colliders, colliderMaterial, TOON_RAMP, stationRig, projectVirtual } from '../render/three.js';
 import { RIGS } from '../render/layout3d.js';
+import { steam3d } from '../render/fx3d.js';
+
+/* Project a point `dy` virtual-units above machine i's cup base to
+   virtual px — the anchor game/state.js uses for machine popTexts
+   ("Coffee ready!", "Poured!"). Null until the 3D scene is built. */
+export function machineHudAnchor(i, dy=0){
+  const r = brew3d && brew3d.machines[i];
+  if (!r) return null;
+  return projectVirtual(r.wp.x, r.wp.y + r.wp.s*dy, r.wp.z);
+}
 
 const CUP_H = CUP_BOT - CUP_TOP;              // measuring-cup height (98)
 const CUP_BOTR = CW*0.4, CUP_TOPR = CW/2;     // cup radii
@@ -108,9 +118,12 @@ export function buildBrew3D(group){
   // scales it down and stands it on the café's back counter (layout3d.js)
   const rig = stationRig(RIGS.brew.anchor, RIGS.brew.at, RIGS.brew.s);
   group.add(rig);
+  // build from the static MACHINES layout, not G.machines — the scene may
+  // init during dayIntro, before startDay/resetMachines populates the
+  // runtime machine list (geometry is identical either way)
   const machines = [];
-  for (let i=0;i<G.machines.length;i++){
-    const src = G.machines[i];
+  for (let i=0;i<MACHINES.length;i++){
+    const src = MACHINES[i];
     const cx = src.x+src.w/2, cupBotV = src.y+CUP_BOT;
     const g = new THREE.Group();
     place(g, cx, cupBotV, MZ);          // local y=0 sits at the cup base
@@ -152,7 +165,8 @@ export function buildBrew3D(group){
       mat('#eaf4fa',{rough:0.2,metal:0.1}));
     rim.rotation.x=Math.PI/2; rim.position.set(0,CUP_H,8); rim.renderOrder=6; g.add(rim);
 
-    const fluidMat = mat(src.type.color, {rough:0.5, noCache:true});
+    // colour is retinted every frame from the live machine's type/add-in
+    const fluidMat = mat(src.kind==='coffee' ? '#5a3220' : '#f4ecdb', {rough:0.5, noCache:true});
     const fluid = fillMesh(fluidGeometry(CUP_BOTR-3, CUP_TOPR-3, CUP_H), fluidMat);
     fluid.position.set(0,0,8); g.add(fluid);
 
@@ -228,12 +242,20 @@ export function buildBrew3D(group){
   brew3d = { machines };
 }
 
-export function updateBrew3D(){
+export function updateBrew3D(dt=0.016){
   if (!brew3d) return;
   for (let i=0;i<G.machines.length;i++){
     const m = G.machines[i], r = brew3d.machines[i];
     const running = m.state==='run', done = m.state==='done';
     const cold = isCold(m);
+    // steam curls off a hot brew — busy while running, a lazy wisp when done
+    if (!cold && (running || done) && Math.random() < dt*(running ? 9 : 1.5)){
+      const s = r.wp.s;
+      // spawn in front of the machine face (body spans local z ±30) so the
+      // rising puffs read white-on-dark instead of vanishing behind it
+      steam3d(r.wp.x + rand(-8,8)*s, r.wp.y + s*(CUP_H+6), r.wp.z + 42*s,
+        { vy: rand(20,34), size: rand(13,20), life: rand(1.0,1.7), sway: rand(4,9) });
+    }
     // fluid fill (tinted by the chosen add-in so it reads as mixed in)
     const target = m.amt/3;
     const frac = done ? target : running ? target*clamp(m.t/m.total,0,1) : 0;

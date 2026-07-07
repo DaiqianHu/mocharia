@@ -42,13 +42,12 @@ export const VIEWS = {
 
 export const FLY_TIME = 0.7;   // seconds for the camera swoop between stations
 
-/* lobby mapping for customers while they are still driven in virtual
-   coords (Phase 3 replaces this with real waypoints): virtual x maps to
-   world x shifted so the queue front lands just left of the register
-   (clear of its occlusion from the order camera), and virtual y picks
-   the lobby depth row. Sprites are drawn at SPRITE_SCALE so figures
-   read taller than the counter. */
-export const SPRITE_SCALE = 1.3;
+/* lobby mapping: the customer walk sim stays in old virtual coords
+   (game/customer.js tx/ty targets are untouched); this maps a virtual
+   (x,y) to a café floor position — x shifted so the queue front lands
+   just left of the register (clear of its occlusion from the order
+   camera), virtual y picking the lobby depth row. The right side wall
+   holds the door, so walking in from virtual x>960 reads as entering. */
 export function lobbyPos(vx, vy){
   return { x: vx - 480 + 80, z: -95 + (vy - 388) * 1.5 };
 }

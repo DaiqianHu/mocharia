@@ -12,9 +12,6 @@ import { BT } from '../game/buttons.js';
 import { owns } from '../game/progress.js';
 import { drawStationLabel } from '../render/scene.js';
 
-/* geometry helpers shared with input hit-testing */
-export function machineRect(m){ return {x:m.x, y:m.y, w:m.w, h:210}; }
-
 /* per-machine geometry, in virtual pixels (shared by 3D build + HUD text) */
 const BODY_H = 74, CUP_TOP = 108, CUP_BOT = 206, CW = 74;
 
@@ -92,7 +89,7 @@ export function isCold(m){ return m.temp!=='hot'; }
    lamp and spout above a translucent measuring cup; the cup fluid is
    a scale-from-anchor cone driven by brew progress. A gold ring marks
    the selected machine; a pour stream and ice appear as needed. Machine
-   selection still uses the 2D machineRect hit-test (valid at z≈0).
+   selection raycasts the invisible collider boxes (hitTestScene 'brew').
    ============================================================ */
 import { THREE, place, mat, fillMesh, fluidGeometry, shadowDecal,
          colliders, colliderMaterial, TOON_RAMP, stationRig, projectVirtual } from '../render/three.js';

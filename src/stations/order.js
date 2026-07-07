@@ -2,7 +2,7 @@
    Order station — take the front customer's order, spawning a
    ticket on the rail. Owns order-taking, the 3D lobby scene, and the
    2D HUD (station label, take button, speech bubble, signs, patience
-   meters). The customer figures are procedural SkinnedMesh rigs.
+   meters). The customer figures are chibi rigs (render/people.js).
    ============================================================ */
 import { rr } from '../core/constants.js';
 import { blip } from '../core/audio.js';
@@ -68,11 +68,11 @@ export function drawOrderStation(c){
 }
 
 /* ============================================================
-   3D lobby + customers. The lobby is a back wall (window + door), a
-   receding floor and a solid front counter with a register; customers
-   are 2D hand-drawn sprite billboards (see render/character.js)
-   reconciled against G.customers each frame — they sit at the same z
-   as the old rigs so the counter still occludes their lower bodies.
+   3D lobby + customers. The lobby rig carries the front counter,
+   register and purchased decor props (the café room itself comes
+   from render/cafe.js); customers are chibi rigs (render/people.js)
+   reconciled against G.customers each frame, walking the virtual-
+   coord sim mapped through lobbyPos onto the café floor.
    ============================================================ */
 import { THREE, place, mat, woodTexture, camera, stationRig, projectVirtual, colliders } from '../render/three.js';
 import { RIGS, lobbyPos } from '../render/layout3d.js';

@@ -287,9 +287,8 @@ export function hitTestScene(px, py, station){
    quantizes our existing hemisphere+directional lighting into flat
    colour bands (Papa's-style cel shading). The ramp is lifted off pure
    black so the darkest band still reads as coloured shadow, not ink.
-   Exported so the few hand-built materials (glass, instanced sprinkles)
-   can share it and match. See character.js for the 2D cartoon customers
-   this makes the 3D props sit alongside without a style clash.
+   Exported so the few hand-built materials (glass, instanced sprinkles,
+   chibi customers in render/people.js) can share it and match.
    ============================================================ */
 export const TOON_RAMP = (() => {
   const steps = new Uint8Array([107, 184, 255]); // ≈ 0.42 / 0.72 / 1.0

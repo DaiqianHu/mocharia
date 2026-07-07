@@ -57,16 +57,6 @@ export function topShelf(){
   return placeShelf(base, seasonal);
 }
 
-/* is the pointer over the drop zone above the drink? */
-function overCup(px,py){
-  const cup=TOP_CUP, topY=cup.by-cup.h;
-  return px>cup.cx-cup.w/2-16 && px<cup.cx+cup.w/2+16 &&
-         py>topY-110 && py<topY+60;
-}
-function relX(px){
-  const cup=TOP_CUP;
-  return clamp((px-cup.cx)/cup.w, -0.48, 0.48);
-}
 function markCov(cov, rx){
   const bin = clamp(Math.floor((rx+0.5)*COV_BINS), 0, COV_BINS-1);
   cov[bin] = Math.min(1, cov[bin]+0.34);

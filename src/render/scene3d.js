@@ -7,7 +7,7 @@
    over render/three.js; imports the station builders (circular-safe:
    every cross-reference runs inside a function at runtime).
    ============================================================ */
-import { scene, camera, renderer, projectVirtual,
+import { scene, camera, projectVirtual,
          orderGroup, brewGroup, topGroup, cannoliGroup,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';

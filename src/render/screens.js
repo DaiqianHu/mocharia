@@ -9,7 +9,7 @@ import { gradeWord, gradeColor } from '../game/scoring.js';
 import { G, currentHoliday } from '../game/state.js';
 import { P, nextRankXp, shopStock, holidayItems, unlocksAtRank } from '../game/progress.js';
 import { BT, shopCardPos, SHOP_CARD_W, SHOP_CARD_H } from '../game/buttons.js';
-import { drawShopBackdrop, drawWood } from './scene.js';
+import { drawShopBackdrop } from './scene.js';
 
 // __BUILD_TIME__ is injected by vite.config.js's `define` at build time
 // (an ISO string baked into the bundle) — formatted once and cached.

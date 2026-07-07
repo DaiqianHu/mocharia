@@ -38,7 +38,7 @@ if (typeof window!=='undefined') window.V3 = {
   machineScreen: i => { const m=MACHINES[i]; return rigPoint(RIGS.brew, m.x+m.w/2, m.y+105, 14); },
   cupScreen:     (dy=125) => rigPoint(RIGS.top, TOP_CUP.cx, TOP_CUP.by-dy, 20),
   cannoliEnd:    end => cannoliScreen((end==='L'?-1:1)*CANNOLI.len/2, 0),
-  custScreen:    cust => { const p=lobbyPos(cust.x,cust.y); return projectVirtual(p.x, 110, p.z); },
+  custScreen:    cust => { const p=lobbyPos(cust.x,cust.y); return projectVirtual(p.x, 140, p.z); },
   RIGS, VIEWS,
 };
 

@@ -78,14 +78,18 @@ export function buildCafe(){
     g.add(bar);
   }
 
-  // entrance door (back wall far right, clear of the brew counter —
-  // customers come and go here)
-  const door = new THREE.Mesh(new THREE.BoxGeometry(130, 250, 8), mat('#8a5a30', {noCache:true}));
+  // entrance door on the RIGHT side wall, at the depth of the customer
+  // walk-in row (z≈-100) — customers entering from +x now read as
+  // walking in through the door.
+  const door = new THREE.Mesh(new THREE.BoxGeometry(8, 260, 150), mat('#8a5a30', {noCache:true}));
   door.material.map = woodTexture(1, 1);
-  door.position.set(690, 125, ROOM.zBack + 4);
+  door.position.set(ROOM.x1 - 4, 130, -100);
   g.add(door);
+  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(6, 276, 170), mat('#5f3d1e'));
+  doorFrame.position.set(ROOM.x1 - 2, 138, -100);
+  g.add(doorFrame);
   const knob = new THREE.Mesh(new THREE.SphereGeometry(7, 10, 8), mat('#e8b040'));
-  knob.position.set(690-48, 120, ROOM.zBack + 10);
+  knob.position.set(ROOM.x1 - 12, 125, -150);
   g.add(knob);
 
   // menu board above the brew counter

@@ -39,7 +39,7 @@ export function drawOrderStation(c){
   for (const cust of G.customers){
     if (cust.state==='queue' || cust.state==='waiting'){
       const wp = lobbyPos(cust.x, cust.y);
-      const s = projectVirtual(wp.x, 200, wp.z);
+      const s = projectVirtual(wp.x, 218, wp.z);
       const pw=54, px=s.x-pw/2, py=s.y;
       c.fillStyle='rgba(30,14,8,0.55)'; rr(c,px-2,py-2,pw+4,12,6); c.fill();
       const col = cust.patience>0.6 ? '#3fd08c' : cust.patience>0.3 ? '#ffb400' : '#ff5a4f';
@@ -50,7 +50,7 @@ export function drawOrderStation(c){
   const f=frontCustomer();
   if (f && Math.hypot(f.tx-f.x,f.ty-f.y)<6){
     const fwp = lobbyPos(f.x, f.y);
-    const fs = projectVirtual(fwp.x, 215, fwp.z);
+    const fs = projectVirtual(fwp.x, 240, fwp.z);
     const bx=fs.x, byy=fs.y-40;
     c.fillStyle='#fff8e6'; rr(c,bx-92,byy-26,184,56,12); c.fill();
     c.beginPath(); c.moveTo(bx-10,byy+30); c.lineTo(bx+10,byy+30); c.lineTo(bx,byy+46); c.closePath(); c.fill();
@@ -73,8 +73,9 @@ export function drawOrderStation(c){
    as the old rigs so the counter still occludes their lower bodies.
    ============================================================ */
 import { THREE, place, mat, woodTexture, camera, stationRig, projectVirtual, colliders } from '../render/three.js';
-import { RIGS, lobbyPos, SPRITE_SCALE } from '../render/layout3d.js';
-import { makeCustomerRig, updateCustomerRig } from '../render/character.js';
+import { RIGS, lobbyPos } from '../render/layout3d.js';
+import { makeChibi, updateChibi, disposeChibi } from '../render/people.js';
+import { TAU } from '../core/constants.js';
 import { owns } from '../game/progress.js';
 
 let order3d = null;
@@ -256,19 +257,19 @@ export function buildOrder3D(group){
   const rig = stationRig(RIGS.lobby.anchor, RIGS.lobby.at, RIGS.lobby.s);
   group.add(rig);
 
-  // ---- front counter (occludes customer lower bodies) ----
+  // ---- front counter (chibi waist height: occludes legs, shows torso) ----
   const counter = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(360,104,70), mat('#8a5a2e',{rough:0.6, noCache:true}));
+  const body = new THREE.Mesh(new THREE.BoxGeometry(360,70,70), mat('#8a5a2e',{rough:0.6, noCache:true}));
   body.material.map = woodTexture(2, 0.6);
-  place(body, 220, 488, 45); counter.add(body);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(376,16,80), mat('#c8a068',{rough:0.5, noCache:true}));
+  place(body, 220, 497, 45); counter.add(body);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(376,12,80), mat('#c8a068',{rough:0.5, noCache:true}));
   top.material.map = woodTexture(2, 0.15);
-  place(top, 220, 432, 48); counter.add(top);
+  place(top, 220, 456, 48); counter.add(top);
   // register
   const reg = new THREE.Mesh(new THREE.BoxGeometry(74,52,44), mat('#4a5a6a',{rough:0.4, metal:0.3}));
-  place(reg, 343, 408, 50); counter.add(reg);
+  place(reg, 343, 424, 50); counter.add(reg);
   const screen = new THREE.Mesh(new THREE.BoxGeometry(58,20,4), mat('#bfe8d8',{rough:0.2, emissive:'#3a8f7a', emissiveIntensity:0.3}));
-  place(screen, 343, 400, 73); counter.add(screen);
+  place(screen, 343, 420, 73); counter.add(screen);
   rig.add(counter);
 
   // decor props for owned shop items (rebuilt when purchases change)
@@ -288,29 +289,31 @@ export function updateOrder3D(){
     live.add(cust.id);
     let rig = order3d.rigs.get(cust.id);
     if (!rig){
-      rig = makeCustomerRig(cust);
+      rig = makeChibi(cust);
       order3d.group.add(rig.group);
       order3d.rigs.set(cust.id, rig);
-      // the sprite plane doubles as the tap collider (group carries custId)
-      colliders.customers.push({ mesh: rig.mesh, id: cust.id });
+      // the whole rig raycasts as the tap collider (group carries custId)
+      colliders.customers.push({ mesh: rig.group, id: cust.id });
     }
-    // map the customer's virtual walk coords onto the lobby floor and
-    // billboard the sprite toward the camera. Feet sit ~70 below the
-    // figure origin (scaled), so lifting the group grounds them; the
-    // front counter (z≈-53) still occludes lower bodies (customers z≤-95).
+    // map the customer's virtual walk coords onto the lobby floor. Face
+    // the walk direction while moving, the camera while standing —
+    // smoothed by shortest-angle lerp so turns read as turns.
     const wp = lobbyPos(cust.x, cust.y);
-    rig.group.scale.setScalar(SPRITE_SCALE);
-    rig.group.position.set(wp.x, 70*SPRITE_SCALE, wp.z);
-    rig.group.rotation.y = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
-    updateCustomerRig(rig, cust, t);
+    let yaw;
+    if (cust.walking){
+      yaw = Math.atan2(cust.tx - cust.x, (cust.ty - cust.y)*1.5);
+    } else {
+      yaw = Math.atan2(camera.position.x - wp.x, camera.position.z - wp.z);
+    }
+    const cur = rig.group.rotation.y;
+    let dy = ((yaw - cur + Math.PI) % TAU + TAU) % TAU - Math.PI;
+    updateChibi(rig, cust, t, wp.x, wp.z, cur + dy*0.15);
   }
-  // remove sprites whose customers have left
+  // remove rigs whose customers have left
   for (const [id, rig] of order3d.rigs){
     if (!live.has(id)){
       order3d.group.remove(rig.group);
-      rig.texture.dispose();
-      rig.mesh.geometry.dispose();
-      rig.mesh.material.dispose();
+      disposeChibi(rig);
       order3d.rigs.delete(id);
       const ci = colliders.customers.findIndex(c=>c.id===id);
       if (ci>=0) colliders.customers.splice(ci,1);

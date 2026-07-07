@@ -12,6 +12,7 @@ import { scene, camera, renderer, projectVirtual,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';
 import { snapView, updateCamera } from './camera.js';
+import { renderInk } from './ink.js';
 import { RIGS, VIEWS, lobbyPos } from './layout3d.js';
 import { MACHINES, TOP_CUP, CANNOLI } from '../game/layout.js';
 import { G, currentHoliday } from '../game/state.js';
@@ -76,5 +77,5 @@ export function update3d(){
   lastNow = now;
   updateCamera(dt, G.station, G.shakeX, G.shakeY);
 
-  renderer.render(scene, camera);
+  renderInk(scene, camera);
 }

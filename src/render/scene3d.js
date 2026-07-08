@@ -11,6 +11,7 @@ import { scene, camera, projectVirtual,
          orderGroup, brewGroup, topGroup, cannoliGroup,
          setHolidayLighting } from './three.js';
 import { buildCafe } from './cafe.js';
+import { buildCat3D, updateCat3D, catScreen } from './cat.js';
 import { snapView, updateCamera } from './camera.js';
 import { renderInk } from './ink.js';
 import { updateFx3d } from './fx3d.js';
@@ -41,6 +42,7 @@ if (typeof window!=='undefined') window.V3 = {
   cupScreen:     (dy=125) => rigPoint(RIGS.top, TOP_CUP.cx, TOP_CUP.by-dy, 20),
   cannoliEnd:    end => cannoliScreen((end==='L'?-1:1)*CANNOLI.len/2, 0),
   custScreen:    cust => { const p=lobbyPos(cust.x,cust.y); return projectVirtual(p.x, 140, p.z); },
+  catScreen:     () => catScreen(),
   RIGS, VIEWS,
 };
 
@@ -48,6 +50,7 @@ export function initScene3d(){
   if (inited) return;
   inited = true;
   buildCafe();
+  buildCat3D(orderGroup);
   buildOrder3D(orderGroup);
   buildBrew3D(brewGroup);
   buildTop3D(topGroup);
@@ -77,6 +80,7 @@ export function update3d(){
   updateBrew3D(dt);
   updateTop3D();
   updateCannoli3D();
+  updateCat3D(dt);
   updateFx3d(dt);
 
   if (G.state==='dayIntro') updateCamera('intro');

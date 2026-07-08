@@ -7,7 +7,7 @@ import { audioCtx, blip, chaChing, fanfare, startMusic, toggleMuted } from './co
 import { canvas, toVirtual } from './core/canvas.js';
 import { spawnParticle, popText, confettiBurst } from './core/particles.js';
 import { STATIONS, RAIL_H } from './game/layout.js';
-import { G, frontCustomer, startDay, serveActive, startMachine, dumpMachine, pourMachine, unlockedNow } from './game/state.js';
+import { G, frontCustomer, startDay, serveActive, startMachine, dumpMachine, pourMachine, unlockedNow, petCat } from './game/state.js';
 import { BT, SIZE_IDS, activeButtons } from './game/buttons.js';
 import { P, saveProgress, resetProgress, shopStock, checkHolidayComplete } from './game/progress.js';
 import { HOLIDAYS } from './game/data.js';
@@ -123,11 +123,12 @@ function pointerDown(x,y){
     }
     return;
   }
-  // order station: tap the front customer directly (raycast their sprite)
+  // order station: tap the cat to pet her, or the front customer to order
   if (G.station==='order'){
-    const f=frontCustomer();
     const hit = hitTestScene(x, y, 'order');
-    if (f && hit && hit.id===f.id){ takeOrder(); return; }
+    if (hit && hit.kind==='cat'){ petCat(); return; }
+    const f=frontCustomer();
+    if (f && hit && hit.kind==='customer' && hit.id===f.id){ takeOrder(); return; }
   }
   // brew station: tap a machine to select it (raycast its collider box)
   if (G.station==='brew'){

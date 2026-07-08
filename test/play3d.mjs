@@ -35,6 +35,15 @@ await page.evaluate(()=>{ if (!window.G.active.cannoli)
     shell: window.D.SHELLS[0], cream: window.D.CREAMS[0], sprinkles:null };
 });
 
+// ---- CAT: drain the customer's patience, pet Mocha, patience recovers ----
+await page.evaluate(()=>{ window.G.customers[0].patience = 0.5; });
+const cat = await page.evaluate(()=>window.V3.catScreen());
+await click(cat.x, cat.y+18);
+{
+  const r = await page.evaluate(()=>({ pat:window.G.customers[0].patience, petT:window.G.cat.petT }));
+  expect('petting the cat calms the customer', r.petT>0 && r.pat>0.6);
+}
+
 // ---- BREW: raycast machine selection ----
 await click(14+1*172+80, 546+22);           // Brew tab
 await new Promise(r=>setTimeout(r,900));    // camera flight

@@ -6,7 +6,8 @@
    ============================================================ */
 import { VW, clamp, rand } from '../core/constants.js';
 import { updateParticles, updateAmbient, spawnParticle, confettiBurst, popText } from '../core/particles.js';
-import { blip, ding, chaChing, starChime, fanfare, pour, rushHorn } from '../core/audio.js';
+import { blip, ding, chaChing, starChime, fanfare, pour, rushHorn, purr } from '../core/audio.js';
+import { catHearts, catScreen } from '../render/cat.js';
 import { MACHINES } from './layout.js';
 import { COFFEE_TIME, MILK_TIME, customersForDay } from './data.js';
 import { Customer } from './customer.js';
@@ -26,6 +27,7 @@ export const G = {
   dayT:0,                          // seconds since the day opened
   rush:null,                       // rush-hour plan (planRush), null before day 3
   streak:{ n:0 },                  // consecutive 3★+ serves (tip combo)
+  cat:{ petT:0, calmT:0 },         // Mocha the café cat (pet anim / calm cooldown)
   served:[],                       // day results
   result:null,                     // serve overlay data
   shake:0, shakeX:0, shakeY:0,
@@ -198,6 +200,8 @@ export function update(dt){
     G.shake = Math.max(0, G.shake - dt*22);
     G.shakeX = rand(-G.shake,G.shake); G.shakeY = rand(-G.shake,G.shake);
   } else { G.shakeX=G.shakeY=0; }
+  if (G.cat.petT>0) G.cat.petT -= dt;
+  if (G.cat.calmT>0) G.cat.calmT -= dt;
 
   const p = G.pointer;
   for (const b of activeButtons()) b.update(dt,p.x,p.y);
@@ -311,6 +315,26 @@ export function pourMachine(m){
   popText(a.x, a.y, 'Poured!', '#8fe0a8', 16);
   pour(0.5);
   blip(640,0.1,'sine',0.12,180);
+}
+
+/* pet Mocha the café cat: always purr + hearts; every 8s the whole
+   queue also calms a little (patience nudge — never a penalty) */
+export function petCat(){
+  G.cat.petT = 1.6;
+  purr();
+  catHearts();
+  const a = catScreen();
+  if (a) popText(a.x, a.y, 'purrrr~', '#ffb6c9', 16);
+  if (G.cat.calmT<=0){
+    G.cat.calmT = 8;
+    let calmed = false;
+    for (const cust of G.customers)
+      if (cust.state==='queue' || cust.state==='waiting'){
+        cust.patience = Math.min(1, cust.patience + 0.15);
+        calmed = true;
+      }
+    if (calmed && a) popText(a.x, a.y-24, 'Everyone loves Mocha!', '#8fe0a8', 14);
+  }
 }
 
 export function currentHoliday(){ return activeHoliday(G.day); }

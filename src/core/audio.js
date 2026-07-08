@@ -86,6 +86,23 @@ export function fanfare(){
   setTimeout(()=>{ blip(1047,0.5,'square',0.07); blip(1319,0.5,'sine',0.06); },400);
 }
 
+/* cat purr — a low triangle with a fast amplitude flutter */
+export function purr(){
+  const a = audioCtx(); if(!a) return;
+  try{
+    const o = a.createOscillator(); o.type='triangle'; o.frequency.value=52;
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.055, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+0.9);
+    const lfo = a.createOscillator(); lfo.frequency.value=24;
+    const lg = a.createGain(); lg.gain.value=0.04;
+    lfo.connect(lg); lg.connect(g.gain);
+    o.connect(g); g.connect(master);
+    o.start(); lfo.start();
+    o.stop(a.currentTime+0.95); lfo.stop(a.currentTime+0.95);
+  }catch(e){}
+}
+
 /* rush-hour horn — two quick honks then a rising chord */
 export function rushHorn(){
   blip(392,0.16,'square',0.09);

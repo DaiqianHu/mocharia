@@ -239,6 +239,7 @@ export const colliders = {
   cupZone: null,      // plane mesh; worldToLocal(hit).x -> relX
   customers: [],      // {mesh, id}
   cannoliEnds: null,  // {L: mesh, R: mesh}
+  cat: null,          // box around Mocha (render/cat.js)
 };
 const raycaster = new THREE.Raycaster();
 const _ndc = new THREE.Vector2();
@@ -256,6 +257,9 @@ export function hitTestScene(px, py, station){
     const hit = raycaster.intersectObjects(meshes, false)[0];
     if (hit){ const c = colliders.machines.find(c=>c.mesh===hit.object); return { kind:'machine', index:c.index }; }
   } else if (station==='order'){
+    // the cat first — she's small and sits in front of the queue
+    if (colliders.cat && raycaster.intersectObject(colliders.cat, false)[0])
+      return { kind:'cat' };
     const meshes = colliders.customers.map(c=>c.mesh);
     const hit = raycaster.intersectObjects(meshes, true)[0];
     if (hit){

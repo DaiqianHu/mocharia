@@ -26,6 +26,11 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: "true"
+          # co-op room relay (relay/ deployed separately via wrangler).
+          # Set the RELAY_URL repo variable to your worker URL, e.g.
+          #   wss://mocha-relay.<account>.workers.dev
+          # Until it's set, co-op simply needs a local relay (test/relay.mjs).
+          RELAY_URL: ${{ vars.RELAY_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

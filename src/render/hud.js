@@ -7,7 +7,9 @@ import { RAIL_H, TABS_Y, PANEL_X } from '../game/layout.js';
 import { G, queueCustomers } from '../game/state.js';
 import { P, nextRankXp } from '../game/progress.js';
 import { RANKS, SIZE_NAME } from '../game/data.js';
+import { STATION_LABEL } from '../game/layout.js';
 import { BT } from '../game/buttons.js';
+import { NET } from '../net/coop.js';
 
 export function drawRail(c){
   const g=c.createLinearGradient(0,0,0,RAIL_H);
@@ -51,6 +53,23 @@ export function drawStreakBadge(c){
   c.fillStyle='#ffd24a'; c.font='800 18px Verdana, sans-serif';
   c.textAlign='center'; c.textBaseline='middle';
   c.fillText('🔥 x'+n, 0, 1);
+  c.restore();
+}
+
+/* co-op partner badge — name + which station they're working */
+export function drawPartnerBadge(c){
+  const p = NET.partner;
+  if (!p) return;
+  const x = G.streak.n>=2 ? 108 : 14;   // slide right of the streak flame
+  const y = RAIL_H+54, h = 36;
+  const label = '👤 '+p.name+' · '+(STATION_LABEL[p.station] || p.station);
+  c.save();
+  c.font='800 13px Verdana, sans-serif';
+  const w = c.measureText(label).width + 26;
+  c.fillStyle='rgba(30,40,70,0.82)'; rr(c,x,y,w,h,10); c.fill();
+  c.strokeStyle='#9ad0ff'; c.lineWidth=2; rr(c,x,y,w,h,10); c.stroke();
+  c.fillStyle='#d6eaff'; c.textAlign='left'; c.textBaseline='middle';
+  c.fillText(label, x+13, y+h/2+1);
   c.restore();
 }
 

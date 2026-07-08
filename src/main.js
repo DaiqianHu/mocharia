@@ -24,6 +24,7 @@ import { update, G } from './game/state.js';
 import { loadProgress, P } from './game/progress.js';
 import { draw } from './render/index.js';
 import { update3d } from './render/scene3d.js';
+import { isGuest, netTick, netGuestUpdate } from './net/coop.js';
 import * as DATA from './game/data.js';
 
 G.hasSave = loadProgress();
@@ -34,7 +35,9 @@ let last=0;
 function frame(ts){
   const dt=Math.min(0.05, last ? (ts-last)/1000 : 0.016);
   last=ts;
-  update(dt);
+  // co-op guests run NO game sim: host snapshots replace update()
+  if (isGuest()) netGuestUpdate(dt); else update(dt);
+  netTick(dt);  // host snapshot/presence broadcast (no-op outside co-op)
   update3d();   // sync + render the WebGL scene (play only), then the 2D HUD
   draw();
   requestAnimationFrame(frame);

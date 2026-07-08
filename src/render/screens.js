@@ -9,7 +9,16 @@ import { gradeWord, gradeColor } from '../game/scoring.js';
 import { G, currentHoliday } from '../game/state.js';
 import { P, nextRankXp, shopStock, holidayItems, unlocksAtRank } from '../game/progress.js';
 import { BT, shopCardPos, SHOP_CARD_W, SHOP_CARD_H } from '../game/buttons.js';
+import { NET, isGuest } from '../net/coop.js';
 import { drawShopBackdrop } from './scene.js';
+
+/* co-op guest: the host drives the day cycle — show who we wait for */
+function waitingLine(c, y){
+  const dots = '.'.repeat(1 + Math.floor(G.time*2)%3);
+  c.fillStyle='#ffe9b8'; c.font='800 16px Verdana, sans-serif';
+  c.textAlign='center'; c.textBaseline='middle';
+  c.fillText('Waiting for '+(NET.partner ? NET.partner.name : 'the host')+dots, VW/2, y);
+}
 
 // __BUILD_TIME__ is injected by vite.config.js's `define` at build time
 // (an ISO string baked into the bundle) — formatted once and cached.
@@ -160,7 +169,8 @@ export function drawDayIntro(c){
     c.fillText('Holiday items collected: '+got+' / '+its.length, VW/2, 252);
   }
   c.restore();
-  BT.start.draw(c);
+  if (isGuest()) waitingLine(c, 552);
+  else BT.start.draw(c);
 }
 
 export function drawSummary(c){
@@ -233,7 +243,8 @@ export function drawSummary(c){
   c.font='700 13px Verdana, sans-serif'; c.fillStyle='#6a4a2c';
   c.fillText('Total wallet: '+fmt$(G.money)+'  ·  '+G.served.length+' drinks served', VW/2, y+34);
   c.restore();
-  BT.next.draw(c);
+  if (isGuest()) waitingLine(c, 532);
+  else BT.next.draw(c);
 }
 
 /* ---- the shop, between days ---- */
@@ -280,7 +291,8 @@ export function drawShop(c){
     c.fillStyle='#ffd98a'; c.font='900 20px "Trebuchet MS", Verdana, sans-serif';
     c.fillText('🎊 '+G.holidayJustDone+' complete! The seasonal goodies wave goodbye… 🎊', VW/2, 460);
   }
-  BT.shopDone.draw(c);
+  if (isGuest()) waitingLine(c, 532);
+  else BT.shopDone.draw(c);
 }
 
 export function drawResult(c){

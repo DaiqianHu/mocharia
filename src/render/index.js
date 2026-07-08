@@ -12,7 +12,8 @@ import { drawOrderStation } from '../stations/order.js';
 import { drawBrewStation } from '../stations/brew.js';
 import { drawTopStation } from '../stations/top.js';
 import { drawCannoliStation } from '../stations/cannoli.js';
-import { drawRail, drawPanel, drawRushBanner, drawStreakBadge } from './hud.js';
+import { drawRail, drawPanel, drawRushBanner, drawStreakBadge, drawPartnerBadge } from './hud.js';
+import { NET } from '../net/coop.js';
 import { drawTitle, drawDayIntro, drawSummary, drawShop, drawResult } from './screens.js';
 import { drawCoopMenu, drawCoopHost, drawCoopJoin, drawCoopName, drawCoopWait, drawHostLeft } from './coopScreens.js';
 
@@ -51,10 +52,22 @@ export function draw(){
     else if (G.station==='brew') drawBrewStation(ctx);
     else if (G.station==='top') drawTopStation(ctx);
     else drawCannoliStation(ctx);
+    // partner cursor ghost, only when we're looking at the same station
+    const pn = NET.partner;
+    if (pn && pn.station===G.station && pn.x>0 && pn.y>0){
+      ctx.save(); ctx.globalAlpha=0.6;
+      ctx.fillStyle='#ffd24a';
+      ctx.beginPath(); ctx.arc(pn.x, pn.y, 7, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#3a2216'; ctx.lineWidth=2; ctx.stroke();
+      ctx.font='800 11px Verdana, sans-serif'; ctx.textAlign='center';
+      ctx.fillStyle='#fff3d0'; ctx.fillText(pn.name, pn.x, pn.y-13);
+      ctx.restore();
+    }
     if (G.station!=='order') drawPanel(ctx);
     drawRail(ctx);
     drawRushBanner(ctx);
     drawStreakBadge(ctx);
+    drawPartnerBadge(ctx);
     // tabs
     ctx.fillStyle='#2c180e'; ctx.fillRect(0,TABS_Y-8,VW,VH-TABS_Y+8);
     for (const b of BT.tabs) b.draw(ctx);

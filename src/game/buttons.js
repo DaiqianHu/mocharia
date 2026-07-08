@@ -73,9 +73,11 @@ export function activeButtons(){
   else if (G.state==='coopName') list.push(...BT.keyGrid.btns, BT.coopDone, BT.coopBack);
   else if (G.state==='coopWait') list.push(BT.coopBack);
   else if (G.state==='hostLeft') list.push(BT.hostLeftOk);
-  else if (G.state==='dayIntro') list.push(BT.start);
-  else if (G.state==='summary') list.push(BT.next);
-  else if (G.state==='shop'){ list.push(BT.shopDone, ...BT.shopBuy.filter(b=>b.visible)); }
+  // co-op guests never drive the day cycle or spend the host's money —
+  // the flow buttons belong to the host alone
+  else if (G.state==='dayIntro'){ if (NET.role!=='guest') list.push(BT.start); }
+  else if (G.state==='summary'){ if (NET.role!=='guest') list.push(BT.next); }
+  else if (G.state==='shop'){ if (NET.role!=='guest') list.push(BT.shopDone, ...BT.shopBuy.filter(b=>b.visible)); }
   else if (G.state==='play'){
     if (G.result){ list.push(BT.cont); return list; }
     list.push(...BT.tabs);

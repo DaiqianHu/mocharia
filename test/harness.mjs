@@ -12,7 +12,12 @@ export async function launch(){
     executablePath: CHROME,
     headless: 'new',
     args: ['--headless=new','--use-gl=swiftshader','--enable-webgl',
-      '--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--no-sandbox'],
+      '--ignore-gpu-blocklist','--enable-unsafe-swiftshader','--no-sandbox',
+      // co-op tests run two pages; background tabs must keep their rAF loop
+      // (the host page freezing = no snapshots)
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding'],
   });
 }
 
@@ -31,7 +36,10 @@ export async function newPage(browser, w, h, dpr){
   page.on('console', m=>{ const t=m.text();
     if(m.type()==='error' && !/favicon|Failed to load resource|404/.test(t)) errors.push('CONSOLE: '+t); });
   page.__errors = errors;
-  await page.goto(URL, { waitUntil:'networkidle0' });
+  // 'load' + poll for the game global: networkidle0 can hang forever on
+  // multi-page runs (pending-resource accounting quirk in headless+SwiftShader)
+  await page.goto(URL, { waitUntil:'load' });
+  await page.waitForFunction(() => window.G && window.R, { timeout: 15000 });
   return page;
 }
 

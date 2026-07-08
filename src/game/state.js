@@ -132,6 +132,8 @@ export function layoutTickets(){
   }
 }
 
+let _rid = 0;   // result serial, so the co-op guest can spot a NEW result card
+
 export function onTicketRemoved(t){
   if (G.active===t) G.active = G.tickets.length ? G.tickets[0] : null;
   if (G.p2 && G.p2.active===t) G.p2.active = G.tickets.length ? G.tickets[0] : null;
@@ -178,7 +180,7 @@ export function serveActive(ctx=G){
   G.money += earn;
   G.dayXp += xp; P.xp += xp;
   G.served.push({ name:t.cust.name, stars, earn, total, os, bs, ts, cs });
-  G.result = { ticket:t, os, bs, ts, cs, total, tip, price:o.price, stars, xp, skill,
+  G.result = { rid: ++_rid, ticket:t, os, bs, ts, cs, total, tip, price:o.price, stars, xp, skill,
                t:0, starsShown:0, custName:t.cust.name, mood: total>=58?'happy':'angry' };
   t.cust.state='served';
   t.cust.mood = total>=58 ? 'happy':'angry';

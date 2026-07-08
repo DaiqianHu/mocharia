@@ -17,6 +17,9 @@ export const P = {
 const KEY = 'mocha-rush-save-v2';
 
 export function saveProgress(){
+  // hard wall: while P mirrors the co-op HOST's progression on a guest
+  // (net/snapshot.js), never let it overwrite the guest's real save
+  if (P.__mirror) return;
   try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){}
 }
 export function loadProgress(){

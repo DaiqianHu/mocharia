@@ -19,8 +19,10 @@ export function drawBrewStation(c){
   drawStationLabel(c,'Brew Station');
   // per-machine 2D captions over the 3D machines (crisp text the 3D can't do)
   for (let i=0;i<G.machines.length;i++) drawMachineHUD(c, G.machines[i], i===G.selMachine);
-  // config strip for the selected machine
+  // config strip for the selected machine (a co-op guest can render one
+  // frame before its first snapshot fills G.machines — just skip it)
   const m = G.machines[G.selMachine];
+  if (!m) return;
   c.fillStyle='rgba(42,22,12,0.82)'; rr(c,40,392,640,116,14); c.fill();
   c.fillStyle='#ffe9b8'; c.font='800 13px Verdana, sans-serif';
   c.textAlign='left'; c.textBaseline='middle';

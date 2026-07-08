@@ -41,7 +41,20 @@ export const G = {
   holidayJustDone:null,
   dayEndT:0, introT:0, titleT:0, summaryT:0,
   best:0,
+  p2:null,                         // co-op guest shadow context (makeShadowCtx); null in single-player
 };
+
+/* A player context: G itself satisfies this contract for the local
+   player (active/drag/pointer/station/selMachine/streak). In co-op the
+   HOST tracks the guest through this shadow context — the sim functions
+   below take `ctx = G` so single-player never touches any of it.
+   `ray` is the guest's own-camera raycast result (sent over the wire);
+   `remote` suppresses pointer-space particles/popTexts on the host. */
+export function makeShadowCtx(name){
+  return { active:null, drag:null, pointer:{x:-99,y:-99,down:false},
+           station:'order', selMachine:0, ray:null, remote:true, name,
+           streak:{ n:0 }, emitAcc:0 };
+}
 
 export function unlockedNow(){ return unlockedItems(G.day); }
 
@@ -119,9 +132,14 @@ export function layoutTickets(){
   }
 }
 
-export function serveActive(){
-  const t = G.active;
-  if (!t || !t.ready() || G.result) return;
+export function onTicketRemoved(t){
+  if (G.active===t) G.active = G.tickets.length ? G.tickets[0] : null;
+  if (G.p2 && G.p2.active===t) G.p2.active = G.tickets.length ? G.tickets[0] : null;
+}
+
+export function serveActive(ctx=G){
+  const t = ctx.active;
+  if (!t || !t.ready() || G.result || !G.tickets.includes(t)) return;
   const o = t.order;
   const os = orderScore(t);
   const bs = brewScore(t);
@@ -132,7 +150,7 @@ export function serveActive(){
   const pat = clamp(t.cust.patience,0,1);
   const stars = total>=90?5 : total>=75?4 : total>=58?3 : total>=38?2 : 1;
   // streak of 3★+ serves builds a tip combo; only a rough serve breaks it
-  const sk = G.streak;
+  const sk = ctx.streak;
   if (stars>=3){
     sk.n++;
     if (sk.n>=2){
@@ -169,7 +187,7 @@ export function serveActive(){
   t.cust.tx = VW+90;
   const idx = G.tickets.indexOf(t);
   if (idx>=0) G.tickets.splice(idx,1);
-  G.active = G.tickets.length ? G.tickets[0] : null;
+  onTicketRemoved(t);
   layoutTickets();
   if (total>=88){ confettiBurst(480,260,80); ding(); }
   chaChing();
@@ -268,6 +286,7 @@ export function update(dt){
 
   updateTop(dt);
   updateCannoli(dt);
+  if (G.p2){ updateTop(dt, G.p2); updateCannoli(dt, G.p2); }
   refreshButtonState();
 
   // day over?
@@ -318,8 +337,8 @@ export function machineMarkerGold(m){
   return m.state==='done' && Math.abs(machineMarker(m)) < MARKER_GOLD;
 }
 
-export function pourMachine(m, perfect=false){
-  const t = G.active;
+export function pourMachine(m, ctx=G, perfect=false){
+  const t = ctx.active;
   if (!t || m.state!=='done') return;
   const slot = m.kind==='coffee' ? 'coffee' : 'milk';
   const a = machineHudAnchor(G.machines.indexOf(m), 250) || { x:m.x+m.w/2, y:150 };

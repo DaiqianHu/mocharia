@@ -87,7 +87,7 @@ function pointerDown(x,y){
       const ai = BT.machAmt.indexOf(b);
       if (ai>=0){ m.amt = ai+1; blip(520+ai*80,0.06,'triangle',0.1); return; }
       if (b===BT.machStart){ startMachine(m); return; }
-      if (b===BT.machPour){ pourMachine(m, machineMarkerGold(m)); return; }
+      if (b===BT.machPour){ pourMachine(m, G, machineMarkerGold(m)); return; }
       if (b===BT.machDump){ dumpMachine(m); return; }
       if (b===BT.topClear){ clearToppings(); return; }
       const zi = BT.sizeBtns.indexOf(b);

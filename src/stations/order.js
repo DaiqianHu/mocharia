@@ -13,14 +13,14 @@ import { G, frontCustomer, layoutTickets, layoutCustomers } from '../game/state.
 import { BT } from '../game/buttons.js';
 import { drawStationLabel } from '../render/scene.js';
 
-export function takeOrder(){
+export function takeOrder(ctx=G){
   const c = frontCustomer();
   if (!c || G.tickets.length>=7) return;
   c.state='waiting';
   const t = new Ticket(c);
   G.tickets.push(t);
   layoutTickets(); layoutCustomers();
-  G.active = t;
+  ctx.active = t;
   const wp = lobbyPos(c.x, c.y);
   const a = projectVirtual(wp.x, 235, wp.z);
   popText(a.x, a.y, 'Order up!', '#ffe9a8', 20);

@@ -31,8 +31,8 @@ export function cannoliShelfHit(x,y){
 
 /* tapping a shell on the shelf picks it (no dragging) — the shell is
    chosen BEFORE any cream goes in; switching shells restarts the build */
-export function chooseShell(item){
-  const t=G.active; if(!t || !t.cannoli) return;
+export function chooseShell(item, ctx=G){
+  const t=ctx.active; if(!t || !t.cannoli) return;
   const cn=t.cannoli;
   if (cn.shell && cn.shell.id===item.id) return;
   t.cannoli = { shell:item, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
@@ -64,20 +64,22 @@ export function cannoliScreen(dx, dy, dz=0){
     at.z + s*(12 + rz - anchor.az));
 }
 
-let emitAcc=0;
 const MAX_END_SPRINKLES=48;
 const pipeRing = { end:null, at:-9 };   // live piping feedback for the draw pass
 
-export function updateCannoli(dt){
-  const t=G.active, drag=G.drag;
-  if (!t || !t.cannoli || !drag || G.station!=='cannoli') return;
-  const p=G.pointer;
+/* ctx = the acting player (G locally; the host passes the co-op guest's
+   shadow context, whose `ray` was raycast on the guest's own camera). */
+export function updateCannoli(dt, ctx=G){
+  const t=ctx.active, drag=ctx.drag;
+  if (!t || !t.cannoli || !drag || ctx.station!=='cannoli') return;
+  const p=ctx.pointer;
   if (!p.down) return;
-  const end = endAt(p.x,p.y);
+  const end = ctx.remote ? (ctx.ray && ctx.ray.kind==='cannoliEnd' ? ctx.ray.end : null)
+                         : endAt(p.x,p.y);
   if (!end) return;
   const cn=t.cannoli;
   if (!cn.shell){
-    if (Math.random()<dt*2) popText(p.x, p.y-30, 'Pick a shell first!', '#ffb08a', 13);
+    if (!ctx.remote && Math.random()<dt*2) popText(p.x, p.y-30, 'Pick a shell first!', '#ffb08a', 13);
     return;
   }
   if (drag.cat==='cream'){
@@ -93,18 +95,20 @@ export function updateCannoli(dt){
     cn[key] = clamp(cn[key] + dt*0.55*(gold?1.8:1), 0, 1);
     if (gold) cn.pipeBonus = clamp((cn.pipeBonus||0) + dt*0.25, 0, 0.15);
     pipeRing.end = end; pipeRing.at = G.time;
-    if (Math.random()<dt*20)
-      spawnParticle({type:'drop', x:p.x+rand(-5,5), y:p.y+18, vy:rand(30,70), g:150,
-        size:rand(2,3.6), color:drag.item.color, life:0.35, alpha:0.95});
-    if (Math.random()<dt*8) hiss(0.07,0.02,900);
+    if (!ctx.remote){
+      if (Math.random()<dt*20)
+        spawnParticle({type:'drop', x:p.x+rand(-5,5), y:p.y+18, vy:rand(30,70), g:150,
+          size:rand(2,3.6), color:drag.item.color, life:0.35, alpha:0.95});
+      if (Math.random()<dt*8) hiss(0.07,0.02,900);
+    }
   } else if (drag.cat==='endsprinkles'){
     const fill = end==='L'?cn.fillL:cn.fillR;
     if (fill<0.2){
-      if (Math.random()<dt*2) popText(p.x, p.y-30, 'Pipe cream first!', '#ffb08a', 13);
+      if (!ctx.remote && Math.random()<dt*2) popText(p.x, p.y-30, 'Pipe cream first!', '#ffb08a', 13);
       return;
     }
-    emitAcc+=dt;
-    if (emitAcc<0.05) return; emitAcc=0;
+    ctx.emitAcc = (ctx.emitAcc||0) + dt;
+    if (ctx.emitAcc<0.05) return; ctx.emitAcc=0;
     // switching sprinkle sets shakes off the old ones — the customer
     // asked for a specific kind
     if (!cn.sprItem || cn.sprItem.id!==drag.item.id){
@@ -114,13 +118,14 @@ export function updateCannoli(dt){
     const col = choice(drag.item.colors);
     dots.push({a:rand(0,TAU), rr:rand(0,1), rot:rand(0,TAU), color:col});
     if (dots.length>MAX_END_SPRINKLES) dots.shift();
-    spawnParticle({type:'sprinkle', x:p.x+rand(-6,6), y:p.y+12, vy:rand(80,130), g:460,
-      size:rand(2.2,3.2), color:col, life:0.7, vr:rand(-8,8), settleY:CANNOLI.cy+rand(-10,10)});
+    if (!ctx.remote)
+      spawnParticle({type:'sprinkle', x:p.x+rand(-6,6), y:p.y+12, vy:rand(80,130), g:460,
+        size:rand(2.2,3.2), color:col, life:0.7, vr:rand(-8,8), settleY:CANNOLI.cy+rand(-10,10)});
   }
 }
 
-export function scrapeCannoli(){
-  const t=G.active; if(!t || !t.cannoli) return;
+export function scrapeCannoli(ctx=G){
+  const t=ctx.active; if(!t || !t.cannoli) return;
   // keep the chosen shell, scrape off cream + sprinkles
   t.cannoli = { shell:t.cannoli.shell, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] };
   const s = cannoliScreen(0, -CANNOLI.r-90);

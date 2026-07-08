@@ -62,56 +62,61 @@ function markCov(cov, rx){
   cov[bin] = Math.min(1, cov[bin]+0.34);
 }
 
-let emitAcc = 0;
-
-export function updateTop(dt){
-  const t=G.active, drag=G.drag;
-  if (!t || !t.cupSize || !drag || G.station!=='top') return;
-  const p=G.pointer;
+/* ctx = the acting player (G locally; the host passes the co-op guest's
+   shadow context, whose `ray` was raycast on the guest's own camera). */
+export function updateTop(dt, ctx=G){
+  const t=ctx.active, drag=ctx.drag;
+  if (!t || !t.cupSize || !drag || ctx.station!=='top') return;
+  const p=ctx.pointer;
   if (!p.down) return;
   // the drop zone is the raycast cup-plane (source of truth for relX).
   // relX is a fraction of the FULL-size cup width; smaller cups are a
   // scaled-down group, so divide by the size scale to keep the pour
   // landing under the pointer.
-  const hit = hitTestScene(p.x, p.y, 'top');
+  const hit = ctx.remote ? (ctx.ray && ctx.ray.kind==='cup' ? ctx.ray : null)
+                         : hitTestScene(p.x, p.y, 'top');
   if (!hit || hit.kind!=='cup') return;
   const sizeS = SIZE_SCALE[t.cupSize] || 1;
   const rx = clamp(hit.relX/sizeS, -0.48, 0.48);
   const tp=t.top, cup=TOP_CUP, crownY=cup.by-cup.h;
-  emitAcc += dt;
+  ctx.emitAcc = (ctx.emitAcc||0) + dt;
   if (drag.cat==='whip'){
-    if (emitAcc<0.05) return; emitAcc=0;
+    if (ctx.emitAcc<0.05) return; ctx.emitAcc=0;
     markCov(tp.whip.cov, rx);
     tp.whip.blobs.push({x:rx+rand(-0.02,0.02), size:rand(0.11,0.16)});
     if (tp.whip.blobs.length>26) tp.whip.blobs.shift();
-    spawnParticle({type:'steam', x:p.x+rand(-4,4), y:crownY-8, vy:rand(-10,-30),
-      size:rand(3,6), color:'rgba(255,252,242,0.9)', life:0.35, alpha:0.9});
-    if (Math.random()<dt*20) hiss(0.08,0.03,3000);
+    if (!ctx.remote){
+      spawnParticle({type:'steam', x:p.x+rand(-4,4), y:crownY-8, vy:rand(-10,-30),
+        size:rand(3,6), color:'rgba(255,252,242,0.9)', life:0.35, alpha:0.9});
+      if (Math.random()<dt*20) hiss(0.08,0.03,3000);
+    }
   } else if (drag.cat==='drizzle'){
-    if (emitAcc<0.03) return; emitAcc=0;
+    if (ctx.emitAcc<0.03) return; ctx.emitAcc=0;
     if (!tp.drizzle || tp.drizzle.item.id!==drag.item.id)
       tp.drizzle = { item:drag.item, cov:new Array(COV_BINS).fill(0), pts:[] };
     markCov(tp.drizzle.cov, rx);
     tp.drizzle.pts.push({x:rx, y:rand(-4,7)});
     if (tp.drizzle.pts.length>60) tp.drizzle.pts.shift();
-    spawnParticle({type:'drop', x:p.x, y:p.y+16, vy:rand(120,180), g:300,
-      size:2.4, color:drag.item.color, life:0.3, alpha:0.95});
+    if (!ctx.remote)
+      spawnParticle({type:'drop', x:p.x, y:p.y+16, vy:rand(120,180), g:300,
+        size:2.4, color:drag.item.color, life:0.3, alpha:0.95});
   } else if (drag.cat==='sprinkles'){
-    if (emitAcc<0.045) return; emitAcc=0;
+    if (ctx.emitAcc<0.045) return; ctx.emitAcc=0;
     if (!tp.sprinkles || tp.sprinkles.item.id!==drag.item.id)
       tp.sprinkles = { item:drag.item, cov:new Array(COV_BINS).fill(0), dots:[] };
     markCov(tp.sprinkles.cov, rx);
     const col = choice(drag.item.colors);
     tp.sprinkles.dots.push({x:rx+rand(-0.03,0.03), y:rand(-5,5), rot:rand(0,TAU), color:col});
     if (tp.sprinkles.dots.length>70) tp.sprinkles.dots.shift();
-    spawnParticle({type:'sprinkle', x:p.x+rand(-6,6), y:p.y+14, vy:rand(90,150), g:480,
-      size:rand(2.4,3.4), color:col, life:0.8, vr:rand(-8,8), settleY:crownY+rand(-4,4)});
+    if (!ctx.remote)
+      spawnParticle({type:'sprinkle', x:p.x+rand(-6,6), y:p.y+14, vy:rand(90,150), g:480,
+        size:rand(2.4,3.4), color:col, life:0.8, vr:rand(-8,8), settleY:crownY+rand(-4,4)});
   }
 }
 
 /* ---- cup-size picker (the first step at this station) ---- */
-export function chooseSize(sz){
-  const t=G.active; if(!t || t.cupSize===sz) return;
+export function chooseSize(sz, ctx=G){
+  const t=ctx.active; if(!t || t.cupSize===sz) return;
   t.cupSize = sz;
   const s = cupScreen(TOP_CUP.h + 60);
   popText(s.x, s.y, SIZE_NAME[sz]+' cup!', '#ffe9a8', 17);
@@ -169,8 +174,8 @@ function drawSizePicker(c, t){
   }
 }
 
-export function clearToppings(){
-  const t=G.active; if(!t) return;
+export function clearToppings(ctx=G){
+  const t=ctx.active; if(!t) return;
   t.top.whip = { cov:new Array(COV_BINS).fill(0), blobs:[] };
   t.top.drizzle=null; t.top.sprinkles=null;
   const s = cupScreen(TOP_CUP.h + 80);

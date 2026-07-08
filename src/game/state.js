@@ -238,6 +238,7 @@ export function update(dt){
   if (G.state==='dayIntro'){ G.introT += dt; return; }
   if (G.state==='summary'){ G.summaryT += dt; return; }
   if (G.state==='shop'){ refreshButtonState(); return; }
+  if (G.state.startsWith('coop') || G.state==='hostLeft'){ refreshButtonState(); return; }
   if (G.state!=='play') return;
 
   // machines keep brewing even inside the result overlay

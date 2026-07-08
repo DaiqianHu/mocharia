@@ -14,6 +14,7 @@ import { drawTopStation } from '../stations/top.js';
 import { drawCannoliStation } from '../stations/cannoli.js';
 import { drawRail, drawPanel, drawRushBanner, drawStreakBadge } from './hud.js';
 import { drawTitle, drawDayIntro, drawSummary, drawShop, drawResult } from './screens.js';
+import { drawCoopMenu, drawCoopHost, drawCoopJoin, drawCoopName, drawCoopWait, drawHostLeft } from './coopScreens.js';
 
 export function draw(){
   const d=VIEW.dpr;
@@ -39,6 +40,12 @@ export function draw(){
   else if (G.state==='dayIntro') drawDayIntro(ctx);
   else if (G.state==='summary') drawSummary(ctx);
   else if (G.state==='shop') drawShop(ctx);
+  else if (G.state==='coopMenu') drawCoopMenu(ctx);
+  else if (G.state==='coopHost') drawCoopHost(ctx);
+  else if (G.state==='coopJoin') drawCoopJoin(ctx);
+  else if (G.state==='coopName') drawCoopName(ctx);
+  else if (G.state==='coopWait') drawCoopWait(ctx);
+  else if (G.state==='hostLeft') drawHostLeft(ctx);
   else if (G.state==='play'){
     if (G.station==='order') drawOrderStation(ctx);
     else if (G.station==='brew') drawBrewStation(ctx);

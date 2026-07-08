@@ -15,6 +15,7 @@ import { takeOrder } from './stations/order.js';
 import { hitTestScene } from './render/three.js';
 import { shelfHit, clearToppings, chooseSize, sizeCardHit } from './stations/top.js';
 import { cannoliShelfHit, scrapeCannoli, chooseShell } from './stations/cannoli.js';
+import { NET, hostRoom, joinRoom, submitName, coopKey, leaveCoop } from './net/coop.js';
 import { VW } from './core/constants.js';
 
 function cycleMachineType(m){
@@ -66,6 +67,15 @@ function pointerDown(x,y){
         G.day=P.day; G.money=P.money; G.best=P.best||0;
         G.introT=0; G.state='dayIntro'; return;
       }
+      // co-op lobby
+      if (b===BT.coop){ G.state='coopMenu'; return; }
+      if (b===BT.coopHostBtn){ hostRoom(); G.state='coopHost'; return; }
+      if (b===BT.coopJoinBtn){ NET.joinCode=''; NET.err=''; G.state='coopJoin'; return; }
+      if (b===BT.coopBack){ leaveCoop(); return; }
+      if (b===BT.coopGo){ joinRoom(); return; }
+      if (b===BT.coopDone){ submitName(); return; }
+      if (b===BT.hostLeftOk){ G.state='title'; return; }
+      if (BT.keyGrid.btns.includes(b)){ coopKey(b.label); return; }
       if (b===BT.start){ startDay(); return; }
       if (b===BT.next){ G.holidayJustDone=null; G.state='shop'; return; }
       if (b===BT.shopDone){

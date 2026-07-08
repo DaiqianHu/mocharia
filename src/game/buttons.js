@@ -5,8 +5,10 @@
 import { VW } from '../core/constants.js';
 import { isMuted } from '../core/audio.js';
 import { Btn } from '../ui/button.js';
+import { makeKeyGrid } from '../ui/keygrid.js';
 import { PANEL_X, TABS_Y, STATIONS, STATION_LABEL } from './layout.js';
 import { G, frontCustomer } from './state.js';
+import { NET } from '../net/coop.js';
 import { P, shopStock } from './progress.js';
 import { RANKS } from './data.js';
 
@@ -37,6 +39,17 @@ BT.sizeBtns = [['Small','#5f9fc4'],['Medium','#5f8fc4'],['Large','#5f7fc4']]
   .map(([lb,col],i)=> new Btn(160+i*180, 428, 120, 44, lb, {color:col}));
 BT.cannoliScrape = new Btn(548, 496, 130, 36, 'Scrape Clean', {color:'#8a6a5a', small:true});
 
+// co-op lobby
+BT.coop        = new Btn(VW/2-110, 522, 220, 40, '👫 Play Together!', {color:'#c86b8a', small:true});
+BT.coopHostBtn = new Btn(VW/2-110, 268, 220, 56, 'Host a Café', {color:'#2fa88e'});
+BT.coopJoinBtn = new Btn(VW/2-110, 340, 220, 56, 'Join a Café', {color:'#5f6fc4'});
+BT.coopBack    = new Btn(48, 530, 130, 42, '← Back', {color:'#8a6a5a', small:true});
+BT.coopGo      = new Btn(VW-208, 530, 140, 42, 'Join! →', {color:'#2fa88e', small:true});
+BT.coopDone    = new Btn(VW-208, 530, 140, 42, 'Done! →', {color:'#2fa88e', small:true});
+BT.hostLeftOk  = new Btn(VW/2-90, 396, 180, 48, 'OK', {color:'#2fa88e'});
+BT.keyGrid = makeKeyGrid();
+if (typeof window !== 'undefined') window.KG = BT.keyGrid;   // test hook
+
 // sound toggle — lives in the bottom-right corner on every screen
 BT.mute = new Btn(VW-54, TABS_Y+3, 42, 38, isMuted()?'🔇':'🔊', {color:'#5a4632', small:true});
 
@@ -53,7 +66,13 @@ BT.shopBuy = Array.from({length:12}, (_,i)=>{
 
 export function activeButtons(){
   const list=[BT.mute];
-  if (G.state==='title'){ list.push(BT.newGame); if (G.hasSave) list.push(BT.contGame); }
+  if (G.state==='title'){ list.push(BT.newGame, BT.coop); if (G.hasSave) list.push(BT.contGame); }
+  else if (G.state==='coopMenu') list.push(BT.coopHostBtn, BT.coopJoinBtn, BT.coopBack);
+  else if (G.state==='coopHost') list.push(BT.coopBack);
+  else if (G.state==='coopJoin') list.push(...BT.keyGrid.btns, BT.coopGo, BT.coopBack);
+  else if (G.state==='coopName') list.push(...BT.keyGrid.btns, BT.coopDone, BT.coopBack);
+  else if (G.state==='coopWait') list.push(BT.coopBack);
+  else if (G.state==='hostLeft') list.push(BT.hostLeftOk);
   else if (G.state==='dayIntro') list.push(BT.start);
   else if (G.state==='summary') list.push(BT.next);
   else if (G.state==='shop'){ list.push(BT.shopDone, ...BT.shopBuy.filter(b=>b.visible)); }
@@ -74,6 +93,8 @@ export function activeButtons(){
 
 export function refreshButtonState(){
   const t = G.active;
+  BT.coopGo.enabled = NET.joinCode.length===4;
+  BT.coopDone.enabled = NET.name.length>=1;
   BT.take.enabled = !!frontCustomer() && G.tickets.length<7;
   BT.take.pulse = BT.take.enabled ? 1 : 0;
   BT.contGame.label = 'Continue — Day '+P.day+' ('+RANKS[P.rank].name+')';

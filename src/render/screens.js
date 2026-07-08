@@ -125,6 +125,7 @@ export function drawTitle(c){
   BT.newGame.pulse=1;
   BT.newGame.draw(c);
   if (G.hasSave) BT.contGame.draw(c);
+  BT.coop.draw(c);
   c.fillStyle='rgba(232,205,176,0.5)'; c.font='700 12px Verdana, sans-serif';
   c.fillText('Mouse / touch · rank up · unlock the menu · survive the holidays', VW/2, 560);
   // build stamp — which deploy is actually live on GitHub Pages

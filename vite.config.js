@@ -11,8 +11,12 @@ export default defineConfig({
     open: true,
   },
   // baked in at build time so the title screen can show which deploy is
-  // actually live on GitHub Pages (cache-busting is otherwise invisible)
+  // actually live on GitHub Pages (cache-busting is otherwise invisible).
+  // __RELAY_URL__ points the co-op client at the room relay: the deployed
+  // Cloudflare Worker in production (set RELAY_URL in the build env),
+  // falling back to the local node stub (test/relay.mjs) for dev/tests.
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __RELAY_URL__: JSON.stringify(process.env.RELAY_URL || 'ws://localhost:8787'),
   },
 });

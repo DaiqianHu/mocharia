@@ -1,0 +1,15 @@
+# Mocha Rush co-op relay — a tiny Cloudflare Worker + Durable Object
+# room server. Deploy manually (needs your free Cloudflare account):
+#   cd relay && npx wrangler login && npx wrangler deploy
+# then build the game with RELAY_URL=wss://mocha-relay.<account>.workers.dev
+name = "mocha-relay"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

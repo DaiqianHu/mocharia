@@ -329,6 +329,10 @@ export function drawResult(c){
   c.fillText('Tip +'+fmt$(r.tip), cx-6, y);
   c.fillStyle='#3a6ac0';
   c.fillText('+'+r.xp+' XP', cx+110, y);
+  if (r.skill>0.005){
+    c.textAlign='center'; c.fillStyle='#c08a1a'; c.font='800 14px Verdana, sans-serif';
+    c.fillText('⭐ Skill bonus +'+fmt$(r.skill), cx, y+28);
+  }
   c.restore();
   BT.cont.draw(c);
 }

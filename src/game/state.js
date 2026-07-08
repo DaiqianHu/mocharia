@@ -151,12 +151,16 @@ export function serveActive(){
     tip *= 1.5;
     popText(VW/2, 214, 'RUSH BONUS! +50% tip', '#ffb24a', 15);
   }
+  // skill-minigame bonus (perfect pours + gold-pulse piping), bonus-only
+  const skillFrac = (t.bonus ? t.bonus.pour : 0) + (t.cannoli ? (t.cannoli.pipeBonus||0) : 0);
+  const skill = o.price * skillFrac;
+  tip += skill;
   const earn = o.price + tip;
   const xp = xpFor(total, o);
   G.money += earn;
   G.dayXp += xp; P.xp += xp;
   G.served.push({ name:t.cust.name, stars, earn, total, os, bs, ts, cs });
-  G.result = { ticket:t, os, bs, ts, cs, total, tip, price:o.price, stars, xp,
+  G.result = { ticket:t, os, bs, ts, cs, total, tip, price:o.price, stars, xp, skill,
                t:0, starsShown:0, custName:t.cust.name, mood: total>=58?'happy':'angry' };
   t.cust.state='served';
   t.cust.mood = total>=58 ? 'happy':'angry';
@@ -281,6 +285,7 @@ function updateMachines(dt){
     // (pour stream + steam are 3D now — stations/brew.js updateBrew3D)
     if (m.t >= m.total){
       m.t = m.total; m.state='done';
+      m.doneAt = G.time;               // starts the pour-timing marker
       if (owns('alarm')){
         ding();
         const a = machineHudAnchor(G.machines.indexOf(m), 250);
@@ -304,7 +309,16 @@ export function dumpMachine(m){
   m.state='idle'; m.t=0;
   blip(300,0.09,'triangle',0.08);
 }
-export function pourMachine(m){
+/* pour-timing minigame: while a machine is done, a marker bounces on a
+   small bar over it (drawMachineHUD); pouring while it crosses the gold
+   center is a "perfect pour" — bonus-only, a miss is a normal pour. */
+export const MARKER_SPEED = 3.2, MARKER_GOLD = 0.25;
+export function machineMarker(m){ return Math.sin((G.time - (m.doneAt||0))*MARKER_SPEED); }
+export function machineMarkerGold(m){
+  return m.state==='done' && Math.abs(machineMarker(m)) < MARKER_GOLD;
+}
+
+export function pourMachine(m, perfect=false){
   const t = G.active;
   if (!t || m.state!=='done') return;
   const slot = m.kind==='coffee' ? 'coffee' : 'milk';
@@ -312,6 +326,12 @@ export function pourMachine(m){
   if (t.cup[slot]){ popText(a.x, a.y, 'Cup already has '+slot+'!', '#ffb08a', 14); return; }
   t.cup[slot] = { type:m.type, temp:m.temp, amt:m.amt, addin:m.addin };
   m.state='idle'; m.t=0;
+  if (perfect){
+    t.bonus.pour += 0.12;
+    popText(a.x, a.y-20, 'PERFECT POUR! ⭐', '#ffd24a', 16);
+    starChime(5);
+    confettiBurst(a.x, a.y, 18);
+  }
   popText(a.x, a.y, 'Poured!', '#8fe0a8', 16);
   pour(0.5);
   blip(640,0.1,'sine',0.12,180);

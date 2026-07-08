@@ -64,7 +64,20 @@ await click(m2.x, m2.y);                    // milk machine
 await click(133, 476);
 await page.evaluate(()=>{ const m=window.G.machines[window.G.selMachine]; m.t=m.total; });
 await new Promise(r=>setTimeout(r,200));
-await click(313, 476);
+// perfect-pour minigame: recenter the marker just before pouring; retry
+// with growing phase offsets in case the CDP click lands late
+{
+  let perfect = false;
+  for (const off of [0, 0.06, 0.12, 0.2, 0.3] ){
+    await page.evaluate((o)=>{ const m=window.G.machines[window.G.selMachine];
+      m.state='done'; m.doneAt = window.G.time + o; window.G.active.cup.milk = null;
+      window.G.active.bonus.pour = 0; }, off);
+    await click(313, 476);
+    perfect = await page.evaluate(()=>window.G.active.bonus.pour > 0);
+    if (perfect) break;
+  }
+  expect('perfect pour bonus lands', perfect);
+}
 s = await st();
 expect('coffee + milk poured', s.active.coffee && s.active.milk);
 await shoot(page,'p2_brew');
@@ -120,12 +133,17 @@ for (const end of ['L','R']){
   await new Promise(r=>setTimeout(r,60));
   const p = pageCoord(e.x, e.y, W, H);
   await page.mouse.move(p.x, p.y);
-  await new Promise(r=>setTimeout(r,900));   // hold to pipe
+  await new Promise(r=>setTimeout(r,1800));  // hold to pipe (long enough to
+                                             // cross a gold pressure pulse)
   await page.mouse.up();
   await new Promise(r=>setTimeout(r,60));
 }
 s = await st();
 expect('cream piped both ends', s.active.cannoli.fillL>0.15 && s.active.cannoli.fillR>0.15);
+{
+  const pb = await page.evaluate(()=>window.G.active.cannoli.pipeBonus||0);
+  expect('gold-pulse piping banked a bonus', pb>0);
+}
 await shoot(page,'p2_cannoli');
 
 // ---- SERVE (with a forced rush + streak so the tip multipliers are exercised) ----
@@ -133,7 +151,8 @@ const pre = await page.evaluate(()=>{
   window.G.streak.n = 3;
   window.G.rush = { at:[], idx:0, warn:0, active:true, t:9 };
   const t = window.G.active;
-  return { price: t.order.price, pat: t.cust.patience };
+  return { price: t.order.price, pat: t.cust.patience,
+           skillFrac: t.bonus.pour + (t.cannoli ? (t.cannoli.pipeBonus||0) : 0) };
 });
 await click(832, 501);
 await new Promise(r=>setTimeout(r,400));
@@ -145,7 +164,8 @@ expect('served (ticket resolved)', s.tickets===0);
   const stars = total>=90?5 : total>=75?4 : total>=58?3 : total>=38?2 : 1;
   const n = stars>=3 ? 4 : 0;                       // serveActive bumps/resets before the tip
   const pat = Math.max(0, Math.min(1, pre.pat));
-  const expectTip = pre.price*(total/100)*(0.25+0.75*pat)*(1+0.1*Math.min(5,n))*1.5;
+  const expectTip = pre.price*(total/100)*(0.25+0.75*pat)*(1+0.1*Math.min(5,n))*1.5
+                  + pre.price*pre.skillFrac;
   const gotTip = post.served.earn - pre.price;
   expect('rush+streak tip multipliers applied', Math.abs(gotTip-expectTip) <= Math.max(0.08, expectTip*0.05));
   expect('streak counter updated', post.streak===n);

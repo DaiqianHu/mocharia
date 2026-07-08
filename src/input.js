@@ -7,7 +7,7 @@ import { audioCtx, blip, chaChing, fanfare, startMusic, toggleMuted } from './co
 import { canvas, toVirtual } from './core/canvas.js';
 import { spawnParticle, popText, confettiBurst } from './core/particles.js';
 import { STATIONS, RAIL_H } from './game/layout.js';
-import { G, frontCustomer, startDay, serveActive, startMachine, dumpMachine, pourMachine, unlockedNow, petCat } from './game/state.js';
+import { G, frontCustomer, startDay, serveActive, startMachine, dumpMachine, pourMachine, machineMarkerGold, unlockedNow, petCat } from './game/state.js';
 import { BT, SIZE_IDS, activeButtons } from './game/buttons.js';
 import { P, saveProgress, resetProgress, shopStock, checkHolidayComplete } from './game/progress.js';
 import { HOLIDAYS } from './game/data.js';
@@ -87,7 +87,7 @@ function pointerDown(x,y){
       const ai = BT.machAmt.indexOf(b);
       if (ai>=0){ m.amt = ai+1; blip(520+ai*80,0.06,'triangle',0.1); return; }
       if (b===BT.machStart){ startMachine(m); return; }
-      if (b===BT.machPour){ pourMachine(m); return; }
+      if (b===BT.machPour){ pourMachine(m, machineMarkerGold(m)); return; }
       if (b===BT.machDump){ dumpMachine(m); return; }
       if (b===BT.topClear){ clearToppings(); return; }
       const zi = BT.sizeBtns.indexOf(b);

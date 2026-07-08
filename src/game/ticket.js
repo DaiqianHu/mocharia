@@ -24,6 +24,7 @@ export class Ticket {
     this.cannoli = this.order.cannoli
       ? { shell:null, cream:null, fillL:0, fillR:0, sprItem:null, dotsL:[], dotsR:[] }
       : null;
+    this.bonus = { pour:0 };    // skill-minigame tip bonus (fraction of price)
     this.x = VW + 80;           // slides in from the right
     this.slot = 0;
     this.flash = 1;             // arrival flash

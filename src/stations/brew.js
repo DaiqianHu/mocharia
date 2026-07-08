@@ -7,7 +7,7 @@
    ============================================================ */
 import { TAU, rr, shade, clamp, mixHex, rand } from '../core/constants.js';
 import { RAIL_H, MACHINES } from '../game/layout.js';
-import { G } from '../game/state.js';
+import { G, machineMarker, MARKER_GOLD } from '../game/state.js';
 import { BT } from '../game/buttons.js';
 import { owns } from '../game/progress.js';
 import { drawStationLabel } from '../render/scene.js';
@@ -72,6 +72,17 @@ function drawMachineHUD(c, m, selected){
     c.save(); c.translate(stat.x,stat.y); c.scale(b,b);
     c.fillStyle='#3fd08c'; c.font='800 14px Verdana, sans-serif';
     c.fillText('READY!', 0, 0); c.restore();
+    // pour-timing bar: pour while the marker crosses the gold center
+    // for a bonus (missing is still a normal pour — bonus-only).
+    // Sits above the READY text so the config strip can't cover it.
+    const bw=90, bh=10, bx=stat.x-bw/2, by=stat.y-30;
+    const mk = machineMarker(m), gold = Math.abs(mk)<MARKER_GOLD;
+    c.fillStyle='rgba(20,10,4,0.72)'; rr(c,bx-2,by-2,bw+4,bh+4,6); c.fill();
+    c.fillStyle = gold ? '#ffd24a' : 'rgba(255,210,74,0.45)';
+    const gw = bw*MARKER_GOLD;
+    rr(c,stat.x-gw/2,by,gw,bh,4); c.fill();
+    c.fillStyle='#fff';
+    rr(c,stat.x + mk*(bw/2-3) - 2, by-3, 4, bh+6, 2); c.fill();
   } else {
     c.fillStyle='rgba(255,233,184,0.6)'; c.font='700 11px Verdana, sans-serif';
     c.fillText('idle', stat.x, stat.y);

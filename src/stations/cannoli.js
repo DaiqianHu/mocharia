@@ -66,6 +66,7 @@ export function cannoliScreen(dx, dy, dz=0){
 
 let emitAcc=0;
 const MAX_END_SPRINKLES=48;
+const pipeRing = { end:null, at:-9 };   // live piping feedback for the draw pass
 
 export function updateCannoli(dt){
   const t=G.active, drag=G.drag;
@@ -84,8 +85,14 @@ export function updateCannoli(dt){
     if (!cn.cream || cn.cream.id!==drag.item.id){
       cn.cream=drag.item; cn.fillL=0; cn.fillR=0; cn.sprItem=null; cn.dotsL.length=0; cn.dotsR.length=0;
     }
+    // piping-pressure minigame: a pulse ring swells around the end;
+    // piping during its gold swell fills faster AND banks a small tip
+    // bonus (bonus-only — off-pulse piping is exactly as before)
+    const gold = Math.sin(G.time*2.6) > 0.55;
     const key = end==='L'?'fillL':'fillR';
-    cn[key] = clamp(cn[key] + dt*0.55, 0, 1);
+    cn[key] = clamp(cn[key] + dt*0.55*(gold?1.8:1), 0, 1);
+    if (gold) cn.pipeBonus = clamp((cn.pipeBonus||0) + dt*0.25, 0, 0.15);
+    pipeRing.end = end; pipeRing.at = G.time;
     if (Math.random()<dt*20)
       spawnParticle({type:'drop', x:p.x+rand(-5,5), y:p.y+18, vy:rand(30,70), g:150,
         size:rand(2,3.6), color:drag.item.color, life:0.35, alpha:0.95});
@@ -160,6 +167,23 @@ export function drawCannoliStation(c){
       rr(c, e.x-52, e.y-62, 104, 124, 14); c.stroke();
     }
     c.setLineDash([]);
+  }
+  // piping pulse ring — pipe during the gold swell for the skill bonus
+  if (G.time - pipeRing.at < 0.12 && pipeRing.end){
+    const pulse = Math.sin(G.time*2.6);
+    const gold = pulse > 0.55;
+    const e = cannoliScreen((pipeRing.end==='L'?-1:1)*len/2, 0);
+    const rad = 30 + pulse*12;
+    c.save();
+    c.strokeStyle = gold ? '#ffd24a' : 'rgba(255,244,214,0.55)';
+    c.lineWidth = gold ? 5 : 3;
+    c.beginPath(); c.arc(e.x, e.y, rad, 0, TAU); c.stroke();
+    if (gold){
+      c.fillStyle='#ffd24a'; c.font='800 13px Verdana, sans-serif';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText('NOW!', e.x, e.y - rad - 12);
+    }
+    c.restore();
   }
   BT.cannoliScrape.draw(c);
   c.fillStyle='rgba(42,22,12,0.75)'; rr(c,268,RAIL_H+14,414,28,8); c.fill();

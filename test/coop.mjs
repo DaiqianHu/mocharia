@@ -107,9 +107,14 @@ expect('whip landed on the host ticket (wire)', await until(host, ()=>{
   const t=window.G.p2.active; return t && t.top.whip.blobs.length>0; }));
 
 // ---- GUEST serves; both see the result; guest Continue clears it ----
-// (orders may want a cannoli — skip it by forcing the order simple on the host)
-await host.evaluate(()=>{ const t=window.G.p2.active;
-  t.order.cannoli=null; t.cannoli=null; t.order.milkAmt = t.cup.milk ? t.order.milkAmt||1 : 0; });
+// (orders may want a cannoli — complete one on the host instead of nulling
+// it out: order objects replicate only once, so mutating them host-side
+// would desync the guest's checklist)
+await host.evaluate(()=>{ const t=window.G.p2.active, D=window.D;
+  const sh=D.SHELLS[0], cr=D.CREAMS[0];
+  t.order.cannoli = { shell:sh, cream:cr, sprinkles:null };
+  t.cannoli = { shell:sh, cream:cr, fillL:1, fillR:1, sprItem:null, dotsL:[], dotsR:[], pipeBonus:0 };
+});
 await sleep(300);
 await click(guest, 832, 501);                // Serve!
 expect('host recorded the serve (wire)', await until(host, ()=>window.G.served.length===1));

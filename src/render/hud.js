@@ -198,7 +198,9 @@ export function drawPanel(c){
   if (o.sprinkles) row(o.sprinkles.name, t.top.sprinkles ? (t.top.sprinkles.item.id===o.sprinkles.id?true:'warn') : false);
   if (!o.whip && !o.drizzle && !o.sprinkles) row('No toppings', (t.top.whip.blobs.length||t.top.drizzle||t.top.sprinkles)?'warn':true);
   // cannoli: shell type, cream, then the exact end-sprinkle the customer named
-  if (o.cannoli){
+  // (cn can transiently be null on a co-op guest — orders replicate once,
+  // ticket state every snapshot — so guard instead of crashing the panel)
+  if (o.cannoli && t.cannoli){
     const cn=t.cannoli;
     row('Cannoli: '+o.cannoli.shell.name,
         cn.shell ? (cn.shell.id===o.cannoli.shell.id ? true:'warn') : false);

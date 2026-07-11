@@ -8,7 +8,8 @@ import { Btn } from '../ui/button.js';
 import { makeKeyGrid } from '../ui/keygrid.js';
 import { PANEL_X, TABS_Y, STATIONS, STATION_LABEL } from './layout.js';
 import { G, frontCustomer } from './state.js';
-import { NET } from '../net/coop.js';
+import { NET, inCoop } from '../net/coop.js';
+import { EMOTES, emoteCooldown } from '../ui/stickers.js';
 import { P, shopStock } from './progress.js';
 import { RANKS } from './data.js';
 
@@ -50,6 +51,10 @@ BT.hostLeftOk  = new Btn(VW/2-90, 396, 180, 48, 'OK', {color:'#2fa88e'});
 BT.keyGrid = makeKeyGrid();
 if (typeof window !== 'undefined') window.KG = BT.keyGrid;   // test hook
 
+// co-op emote tray — lives in the tab band's dead space (tabs end ≈690,
+// mute starts at 906), identical on all four stations
+BT.emotes = EMOTES.map((id, i)=> new Btn(700+i*40, TABS_Y+3, 36, 38, '', {color:'#6a4a8a', small:true}));
+
 // sound toggle — lives in the bottom-right corner on every screen
 BT.mute = new Btn(VW-54, TABS_Y+3, 42, 38, isMuted()?'🔇':'🔊', {color:'#5a4632', small:true});
 
@@ -69,6 +74,7 @@ export function activeButtons(){
   if (G.state==='title'){ list.push(BT.newGame, BT.coop); if (G.hasSave) list.push(BT.contGame); }
   else if (G.state==='coopMenu') list.push(BT.coopHostBtn, BT.coopJoinBtn, BT.coopBack);
   else if (G.state==='coopHost') list.push(BT.coopBack);
+  else if (G.state==='coopHostName') list.push(...BT.keyGrid.btns, BT.coopDone, BT.coopBack);
   else if (G.state==='coopJoin') list.push(...BT.keyGrid.btns, BT.coopGo, BT.coopBack);
   else if (G.state==='coopName') list.push(...BT.keyGrid.btns, BT.coopDone, BT.coopBack);
   else if (G.state==='coopWait') list.push(BT.coopBack);
@@ -79,7 +85,10 @@ export function activeButtons(){
   else if (G.state==='summary'){ if (NET.role!=='guest') list.push(BT.next); }
   else if (G.state==='shop'){ if (NET.role!=='guest') list.push(BT.shopDone, ...BT.shopBuy.filter(b=>b.visible)); }
   else if (G.state==='play'){
-    if (G.result){ list.push(BT.cont); return list; }
+    // emote tray for both players — even over the result card, so they
+    // can cheer (or tease) each other's stars
+    if (G.result){ list.push(BT.cont); if (inCoop()) list.push(...BT.emotes); return list; }
+    if (inCoop()) list.push(...BT.emotes);
     list.push(...BT.tabs);
     if (G.station==='order') list.push(BT.take);
     else if (G.station==='brew') list.push(BT.machType, BT.machTemp, BT.machAddin, ...BT.machAmt, BT.machStart, BT.machPour, BT.machDump);
@@ -97,6 +106,8 @@ export function refreshButtonState(){
   const t = G.active;
   BT.coopGo.enabled = NET.joinCode.length===4;
   BT.coopDone.enabled = NET.name.length>=1;
+  const eReady = emoteCooldown()<=0;
+  for (const b of BT.emotes) b.enabled = eReady;
   BT.take.enabled = !!frontCustomer() && G.tickets.length<7;
   BT.take.pulse = BT.take.enabled ? 1 : 0;
   BT.contGame.label = 'Continue — Day '+P.day+' ('+RANKS[P.rank].name+')';

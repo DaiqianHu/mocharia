@@ -103,6 +103,15 @@ export function purr(){
   }catch(e){}
 }
 
+/* one playful jingle per emote sticker (ui/stickers.js) */
+export function emoteSound(id){
+  if (id === 'heart'){ blip(660,0.1,'sine',0.1); setTimeout(()=>blip(990,0.16,'sine',0.1),90); }
+  else if (id === 'laugh'){ blip(700,0.08,'square',0.055); setTimeout(()=>blip(590,0.08,'square',0.055),90); setTimeout(()=>blip(500,0.11,'square',0.055),180); }
+  else if (id === 'hurry'){ blip(392,0.12,'square',0.09); setTimeout(()=>blip(494,0.14,'square',0.09),140); }
+  else if (id === 'cat') purr();
+  else { starChime(5); setTimeout(()=>blip(1760,0.18,'sine',0.08),80); }
+}
+
 /* rush-hour horn — two quick honks then a rising chord */
 export function rushHorn(){
   blip(392,0.16,'square',0.09);

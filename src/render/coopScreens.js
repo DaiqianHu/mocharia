@@ -51,6 +51,18 @@ export function drawCoopMenu(c){
   BT.coopHostBtn.draw(c); BT.coopJoinBtn.draw(c); BT.coopBack.draw(c);
 }
 
+/* host name entry — shown before the room opens, prefilled with the
+   last-used name so returning hosts just tap Done */
+export function drawCoopHostName(c){
+  drawShopBackdrop(c);
+  card(c, 78, 460);
+  title(c, 'What\'s your barista name?', 120);
+  sub(c, 'So your friend knows who\'s brewing!', 152);
+  slots(c, NET.name, 8, 172, 50);
+  BT.keyGrid.draw(c);
+  BT.coopDone.draw(c); BT.coopBack.draw(c);
+}
+
 export function drawCoopHost(c){
   drawShopBackdrop(c);
   card(c, 100, 430);

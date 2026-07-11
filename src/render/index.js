@@ -12,10 +12,11 @@ import { drawOrderStation } from '../stations/order.js';
 import { drawBrewStation } from '../stations/brew.js';
 import { drawTopStation } from '../stations/top.js';
 import { drawCannoliStation } from '../stations/cannoli.js';
-import { drawRail, drawPanel, drawRushBanner, drawStreakBadge, drawPartnerBadge } from './hud.js';
-import { NET } from '../net/coop.js';
+import { drawRail, drawPanel, drawRushBanner, drawStreakBadge, drawPartnerBadge, drawPartnerTag } from './hud.js';
+import { NET, inCoop } from '../net/coop.js';
+import { drawStickers, drawStickerArt, EMOTES } from '../ui/stickers.js';
 import { drawTitle, drawDayIntro, drawSummary, drawShop, drawResult } from './screens.js';
-import { drawCoopMenu, drawCoopHost, drawCoopJoin, drawCoopName, drawCoopWait, drawHostLeft } from './coopScreens.js';
+import { drawCoopMenu, drawCoopHost, drawCoopHostName, drawCoopJoin, drawCoopName, drawCoopWait, drawHostLeft } from './coopScreens.js';
 
 export function draw(){
   const d=VIEW.dpr;
@@ -43,6 +44,7 @@ export function draw(){
   else if (G.state==='shop') drawShop(ctx);
   else if (G.state==='coopMenu') drawCoopMenu(ctx);
   else if (G.state==='coopHost') drawCoopHost(ctx);
+  else if (G.state==='coopHostName') drawCoopHostName(ctx);
   else if (G.state==='coopJoin') drawCoopJoin(ctx);
   else if (G.state==='coopName') drawCoopName(ctx);
   else if (G.state==='coopWait') drawCoopWait(ctx);
@@ -63,6 +65,7 @@ export function draw(){
       ctx.fillStyle='#fff3d0'; ctx.fillText(pn.name, pn.x, pn.y-13);
       ctx.restore();
     }
+    drawPartnerTag(ctx);   // name pill over the partner's chibi in the scene
     if (G.station!=='order') drawPanel(ctx);
     drawRail(ctx);
     drawRushBanner(ctx);
@@ -72,6 +75,21 @@ export function draw(){
     ctx.fillStyle='#2c180e'; ctx.fillRect(0,TABS_Y-8,VW,VH-TABS_Y+8);
     for (const b of BT.tabs) b.draw(ctx);
     if (G.result) drawResult(ctx);
+    // co-op emote tray (buttons + mini sticker icons) and any flying
+    // stickers — after the result card so reactions pop over it
+    if (inCoop()){
+      for (let i=0;i<BT.emotes.length;i++){
+        const b = BT.emotes[i];
+        b.draw(ctx);
+        ctx.save();
+        ctx.globalAlpha = b.enabled ? 1 : 0.45;
+        ctx.translate(b.x+b.w/2, b.y+b.h/2);
+        ctx.scale(b.s, b.s);   // ride the button's press spring
+        drawStickerArt(ctx, EMOTES[i], 13);
+        ctx.restore();
+      }
+    }
+    drawStickers(ctx);
   }
   BT.mute.draw(ctx);
   drawAmbient(ctx);

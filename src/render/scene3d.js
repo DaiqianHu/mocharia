@@ -15,6 +15,7 @@ import { buildCat3D, updateCat3D, catScreen } from './cat.js';
 import { snapView, updateCamera } from './camera.js';
 import { renderInk } from './ink.js';
 import { updateFx3d } from './fx3d.js';
+import { updatePartner3D } from './partner3d.js';
 import { RIGS, VIEWS, lobbyPos } from './layout3d.js';
 import { MACHINES, TOP_CUP, CANNOLI } from '../game/layout.js';
 import { G, currentHoliday } from '../game/state.js';
@@ -81,6 +82,7 @@ export function update3d(){
   updateTop3D();
   updateCannoli3D();
   updateCat3D(dt);
+  updatePartner3D(dt, now);   // co-op partner chibi (also in the intro wide shot)
   updateFx3d(dt);
 
   if (G.state==='dayIntro') updateCamera('intro');

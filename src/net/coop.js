@@ -23,6 +23,8 @@ import { hitTestScene } from '../render/three.js';
 import { catHearts } from '../render/cat.js';
 import { P, loadProgress } from '../game/progress.js';
 import { encodeSnapshot, applySnapshot, ref, deref, DRAG_KIND } from './snapshot.js';
+import { receiveEmote } from '../ui/stickers.js';
+import { partnerEmoteJuice } from '../render/partner3d.js';
 import { clamp, rand } from '../core/constants.js';
 import { ding, buzz, blip, chaChing, pour, rushHorn, purr, starChime } from '../core/audio.js';
 
@@ -33,11 +35,21 @@ export const NET = {
   ws: null,
   code: '',            // host: the room code to read aloud
   joinCode: '',        // guest: code being typed
-  name: '',            // guest: role name being typed
+  name: '',            // the LOCAL player's barista name (host or guest)
   err: '',             // lobby error line ('Room not found', …)
   partner: null,       // {name, station, x, y} once paired
   seq: 0,
 };
+
+/* last-used barista name, remembered across sessions so the lobby
+   name screens come prefilled (both hosting and joining) */
+const NAME_KEY = 'mocha-rush-coop-name';
+export function loadCoopName(){
+  try { return (localStorage.getItem(NAME_KEY) || '').slice(0, 8); } catch(e){ return ''; }
+}
+export function saveCoopName(){
+  try { localStorage.setItem(NAME_KEY, NET.name); } catch(e){}
+}
 
 if (typeof window !== 'undefined') window.NET = NET;   // test hook (like window.G)
 
@@ -63,7 +75,7 @@ export function hostRoom(){
       if (m.proto !== PROTO) return;
       NET.partner = { name: m.name || 'FRIEND', station: 'order', x: -99, y: -99 };
       G.p2 = makeShadowCtx(NET.partner.name);
-      send({ t:'welcome', proto: PROTO, day: G.day });
+      send({ t:'welcome', proto: PROTO, day: G.day, name: NET.name });
       ding();
       if (G.state === 'coopHost') G.state = 'dayIntro';
       return;
@@ -83,7 +95,8 @@ export function joinRoom(){
     const m = JSON.parse(e.data);
     if (m.t === 'ok'){ G.state = 'coopName'; return; }
     if (m.t === 'welcome'){
-      NET.partner = { name: 'BARISTA', station: 'order', x: -99, y: -99 };
+      // older hosts don't send a name — keep the generic label
+      NET.partner = { name: m.name || 'BARISTA', station: 'order', x: -99, y: -99 };
       ding();
       G.state = 'coopWait';
       return;
@@ -104,12 +117,14 @@ export function joinRoom(){
 
 export function submitName(){
   if (!isGuest() || NET.name.length === 0) return;
+  saveCoopName();
   send({ t:'hello', proto: PROTO, name: NET.name });
 }
 
 /* ---- canvas-keyboard input for the lobby screens ---- */
 export function coopKey(ch){
-  const buf = G.state === 'coopJoin' ? 'joinCode' : G.state === 'coopName' ? 'name' : null;
+  const buf = G.state === 'coopJoin' ? 'joinCode'
+            : (G.state === 'coopName' || G.state === 'coopHostName') ? 'name' : null;
   if (!buf) return;
   const max = buf === 'joinCode' ? 4 : 8;
   if (ch === '⌫') NET[buf] = NET[buf].slice(0, -1);
@@ -156,6 +171,14 @@ function onHostGone(){
 /* guest → host action (guest-side only; host/solo call the sim directly) */
 export function act(a, args={}){ send({ t:'act', a, ...args }); }
 
+/* emote stickers travel both directions as a tiny standalone message —
+   pure juice, so it rides beside the snapshot stream, never inside it */
+export function sendEmote(id){ send({ t:'emote', e: id }); }
+function onEmoteIn(id){
+  receiveEmote(id);          // big sticker + sound on our screen
+  partnerEmoteJuice(id);     // and the partner's chibi reacts
+}
+
 /* host: run a guest action against the shadow context */
 function execAct(m){
   const ctx = G.p2; if (!ctx) return;
@@ -195,6 +218,7 @@ function onHostMessage(m){
   else if (m.t === 'pres'){
     if (NET.partner){ NET.partner.station = m.station; NET.partner.x = m.x; NET.partner.y = m.y; }
   }
+  else if (m.t === 'emote') onEmoteIn(m.e);
   else if (m.t === 'bye') onPartnerLeft();
 }
 
@@ -204,6 +228,7 @@ function onGuestMessage(m){
   else if (m.t === 'pres'){
     if (NET.partner){ NET.partner.station = m.station; NET.partner.x = m.x; NET.partner.y = m.y; }
   }
+  else if (m.t === 'emote') onEmoteIn(m.e);
   else if (m.t === 'bye') onHostGone();
 }
 

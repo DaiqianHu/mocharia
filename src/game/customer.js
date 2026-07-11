@@ -13,6 +13,15 @@ import { projectVirtual } from '../render/three.js';
 
 let _cid = 0;
 
+/* appearance palette — shared with the co-op partner chibi
+   (render/partner3d.js derives a look from the player name) */
+export const LOOKS = {
+  skins:  ['#f3c9a0','#e6b088','#c98f60','#8a5a3a','#f7d9b8','#6f4529'],
+  shirts: ['#e2574c','#3a86c8','#43a06d','#c86bb8','#e0a437','#5f6fc4','#3fb0a8','#8a6ac0'],
+  pants:  ['#3a4a5c','#5a4632','#444','#6a5a7a','#2e4a3e'],
+  hairs:  ['#2c1c12','#5a3a1e','#8a5a2a','#c9c2b8','#a83a2a','#3a3a44','#e0c060'],
+};
+
 export class Customer {
   constructor(day, unlocked, calm){
     this.id = ++_cid;
@@ -25,10 +34,10 @@ export class Customer {
     this.tx = 0;    this.ty = 380;
     this.bobPhase = rand(0,TAU);
     this.mood = 'happy';    // happy / meh / angry / furious
-    this.skin  = choice(['#f3c9a0','#e6b088','#c98f60','#8a5a3a','#f7d9b8','#6f4529']);
-    this.shirt = choice(['#e2574c','#3a86c8','#43a06d','#c86bb8','#e0a437','#5f6fc4','#3fb0a8','#8a6ac0']);
-    this.pants = choice(['#3a4a5c','#5a4632','#444','#6a5a7a','#2e4a3e']);
-    this.hairC = choice(['#2c1c12','#5a3a1e','#8a5a2a','#c9c2b8','#a83a2a','#3a3a44','#e0c060']);
+    this.skin  = choice(LOOKS.skins);
+    this.shirt = choice(LOOKS.shirts);
+    this.pants = choice(LOOKS.pants);
+    this.hairC = choice(LOOKS.hairs);
     this.hairStyle = randi(0,5);
     this.glasses = Math.random()<0.28;
     this.reaction = 0;      // pop after being served

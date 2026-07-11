@@ -10,6 +10,7 @@ import { RANKS, SIZE_NAME } from '../game/data.js';
 import { STATION_LABEL } from '../game/layout.js';
 import { BT } from '../game/buttons.js';
 import { NET } from '../net/coop.js';
+import { partnerAnchor } from './partner3d.js';
 
 export function drawRail(c){
   const g=c.createLinearGradient(0,0,0,RAIL_H);
@@ -70,6 +71,21 @@ export function drawPartnerBadge(c){
   c.strokeStyle='#9ad0ff'; c.lineWidth=2; rr(c,x,y,w,h,10); c.stroke();
   c.fillStyle='#d6eaff'; c.textAlign='left'; c.textBaseline='middle';
   c.fillText(label, x+13, y+h/2+1);
+  c.restore();
+}
+
+/* name pill floating over the partner's chibi in the 3D café */
+export function drawPartnerTag(c){
+  const a = partnerAnchor();
+  if (!a) return;
+  const y = a.y + Math.sin(G.time*2)*2;   // tiny idle bob
+  c.save();
+  c.font='800 12px Verdana, sans-serif';
+  const w = c.measureText(a.name).width + 22;
+  c.fillStyle='rgba(30,40,70,0.82)'; rr(c, a.x-w/2, y-13, w, 26, 9); c.fill();
+  c.strokeStyle='#9ad0ff'; c.lineWidth=2; rr(c, a.x-w/2, y-13, w, 26, 9); c.stroke();
+  c.fillStyle='#d6eaff'; c.textAlign='center'; c.textBaseline='middle';
+  c.fillText(a.name, a.x, y+1);
   c.restore();
 }
 

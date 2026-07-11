@@ -15,7 +15,9 @@ import { takeOrder } from './stations/order.js';
 import { hitTestScene } from './render/three.js';
 import { shelfHit, clearToppings, chooseSize, sizeCardHit } from './stations/top.js';
 import { cannoliShelfHit, scrapeCannoli, chooseShell } from './stations/cannoli.js';
-import { NET, hostRoom, joinRoom, submitName, coopKey, leaveCoop, isGuest, act } from './net/coop.js';
+import { NET, hostRoom, joinRoom, submitName, coopKey, leaveCoop, isGuest, act,
+         loadCoopName, saveCoopName, sendEmote } from './net/coop.js';
+import { EMOTES, tryEmote } from './ui/stickers.js';
 import { ref } from './net/snapshot.js';
 import { VW } from './core/constants.js';
 
@@ -71,11 +73,17 @@ function pointerDown(x,y){
       }
       // co-op lobby
       if (b===BT.coop){ G.state='coopMenu'; return; }
-      if (b===BT.coopHostBtn){ hostRoom(); G.state='coopHost'; return; }
-      if (b===BT.coopJoinBtn){ NET.joinCode=''; NET.err=''; G.state='coopJoin'; return; }
+      // hosting asks for a name first (prefilled with the last-used one);
+      // the room only opens once the name is in
+      if (b===BT.coopHostBtn){ NET.name=loadCoopName(); NET.err=''; G.state='coopHostName'; return; }
+      if (b===BT.coopJoinBtn){ NET.joinCode=''; NET.name=loadCoopName(); NET.err=''; G.state='coopJoin'; return; }
       if (b===BT.coopBack){ leaveCoop(); return; }
       if (b===BT.coopGo){ joinRoom(); return; }
-      if (b===BT.coopDone){ submitName(); return; }
+      if (b===BT.coopDone){
+        if (G.state==='coopHostName'){ saveCoopName(); hostRoom(); G.state='coopHost'; }
+        else submitName();
+        return;
+      }
       if (b===BT.hostLeftOk){ G.state='title'; return; }
       if (BT.keyGrid.btns.includes(b)){ coopKey(b.label); return; }
       if (b===BT.start){ startDay(); return; }
@@ -85,6 +93,8 @@ function pointerDown(x,y){
         G.holidayJustDone=null; G.introT=0; G.state='dayIntro'; return;
       }
       if (b===BT.cont){ if (isGuest()) act('contResult'); else G.result=null; return; }
+      const emi = BT.emotes.indexOf(b);
+      if (emi>=0){ if (tryEmote(EMOTES[emi])) sendEmote(EMOTES[emi]); return; }
       const ti = BT.tabs.indexOf(b);
       if (ti>=0){ G.station=STATIONS[ti]; G.drag=null; return; }
       if (b===BT.take){ if (isGuest()) act('takeOrder'); else takeOrder(); return; }

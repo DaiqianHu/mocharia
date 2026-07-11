@@ -43,6 +43,17 @@ export const VIEWS = {
   intro:   { pos: {x:560,  y:240, z:470},  tgt: {x:-260, y:100, z:-280}, fov: 48 },
 };
 
+/* Where the co-op partner's chibi stands while working each station —
+   on the café floor (y=0), inside that station's own camera frame but
+   off the camera→work-surface sightline so it never blocks the local
+   player's work. Screenshot-tuned; cannoli (fov 40) is the tightest. */
+export const PARTNER_SPOTS = {
+  order:   { x: -150, z: -240 },   // behind the front counter, left of the pick-up area
+  brew:    { x:  530, z: -270 },   // just right of the machine line
+  top:     { x: -350, z: -440 },   // behind the topping counter, against the back wall
+  cannoli: { x: -780, z: -430 },   // back corner behind the cannoli counter
+};
+
 /* lobby mapping: the customer walk sim stays in old virtual coords
    (game/customer.js tx/ty targets are untouched); this maps a virtual
    (x,y) to a café floor position — x shifted so the queue front lands

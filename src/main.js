@@ -25,6 +25,7 @@ import { loadProgress, P } from './game/progress.js';
 import { draw } from './render/index.js';
 import { update3d } from './render/scene3d.js';
 import { isGuest, netTick, netGuestUpdate } from './net/coop.js';
+import { updateStickers } from './ui/stickers.js';
 import * as DATA from './game/data.js';
 
 G.hasSave = loadProgress();
@@ -37,6 +38,7 @@ function frame(ts){
   last=ts;
   // co-op guests run NO game sim: host snapshots replace update()
   if (isGuest()) netGuestUpdate(dt); else update(dt);
+  updateStickers(dt, G.state==='play');   // co-op emote pops (no-op solo)
   netTick(dt);  // host snapshot/presence broadcast (no-op outside co-op)
   update3d();   // sync + render the WebGL scene (play only), then the 2D HUD
   draw();

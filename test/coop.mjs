@@ -34,10 +34,14 @@ const typeOnGrid = async (pg, text)=>{
   }
 };
 
-// ---- lobby: host a room, guest joins with a name ----
+// ---- lobby: host names themself + opens a room, guest joins with a name ----
 await click(host, 480, 542);                 // Play Together!
 await click(host, 480, 296);                 // Host a Café
+expect('host reached name entry', await until(host, ()=>window.G.state==='coopHostName'));
+await typeOnGrid(host, 'DAD');
+await click(host, 822, 551);                 // Done! →
 expect('host got a room code', await until(host, ()=>window.NET.code.length===4));
+expect('host name persisted', await host.evaluate(()=>localStorage.getItem('mocha-rush-coop-name')==='DAD'));
 const code = await host.evaluate(()=>window.NET.code);
 
 await click(guest, 480, 542);
@@ -49,11 +53,26 @@ await typeOnGrid(guest, 'MAYA');
 await click(guest, 822, 551);                // Done! →
 expect('host sees MAYA join', await until(host, ()=>window.G.p2 && window.G.p2.name==='MAYA'));
 expect('host moved to dayIntro', await host.evaluate(()=>window.G.state==='dayIntro'));
+expect('guest sees the host name from welcome', await until(guest,
+  ()=>window.NET.partner && window.NET.partner.name==='DAD'));
 
 // ---- host opens the shop; guest follows via snapshots ----
 await click(host, 480, 514);                 // Open the Shop
 expect('guest followed into play', await until(guest, ()=>window.G.state==='play'));
 expect('guest sees replicated machines', await guest.evaluate(()=>window.G.machines.length===4));
+
+// ---- partner chibis exist on both sides ----
+expect('host renders the partner chibi', await until(host, ()=>window.PARTNER3D.hasRig));
+expect('guest renders the partner chibi', await until(guest, ()=>window.PARTNER3D.hasRig));
+
+// ---- emote round-trip, both directions ----
+await click(guest, 718, 568);                // guest taps the ❤ tray slot
+await click(guest, 718, 568);                // retap 140ms later → inside the 0.8s cooldown
+expect('one send confirmation (cooldown blocks spam)',
+  await guest.evaluate(()=>window.STICKERS.active.length===1));
+expect('host received the emote sticker', await until(host, ()=>window.STICKERS.active.length>0));
+await click(host, 758, 568);                 // host answers with a laugh
+expect('guest received the emote sticker', await until(guest, ()=>window.STICKERS.active.some(e=>e.big)));
 
 // ---- GUEST takes the order through the wire ----
 expect('guest sees the first customer arrive',
@@ -65,6 +84,8 @@ expect('guest got the ticket + active', await until(guest, ()=>window.G.tickets.
 
 // ---- GUEST brews coffee + milk on the host's machines ----
 await click(guest, 14+1*172+80, 568);        // Brew tab (guest-local camera)
+expect('host chibi follows the partner to brew', await until(host,
+  ()=>window.PARTNER3D.station==='brew'));
 const m0 = await guest.evaluate(()=>window.V3.machineScreen(0));
 await click(guest, m0.x, m0.y);
 await click(guest, 133, 476);                // Start
